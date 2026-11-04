@@ -1,6 +1,7 @@
 const {
   withSettingsGradle,
   withAppBuildGradle,
+  withProjectBuildGradle,
   withMainApplication,
 } = require('expo/config-plugins');
 
@@ -41,7 +42,36 @@ function addAppBuildGradle(config) {
       );
     }
 
+    if (!/buildFeatures\s*\{[^}]*buildConfig\s+true/.test(contents)) {
+      contents = contents.replace(
+        /^android\s*\{/m,
+        'android {\n    buildFeatures {\n        buildConfig true\n    }\n'
+      );
+    }
+
     cfg.modResults.contents = contents;
+    return cfg;
+  });
+}
+
+/** Forces buildConfig on for the WatermelonDB library subproject (AGP 8.3+ ignores the global flag); uses plugins.withId to avoid afterEvaluate timing issues. */
+function addProjectBuildGradle(config) {
+  return withProjectBuildGradle(config, (cfg) => {
+    if (!cfg.modResults.contents.includes('name == "nozbe_watermelondb"')) {
+      cfg.modResults.contents += `
+subprojects {
+    plugins.withId("com.android.library") {
+        if (name == "nozbe_watermelondb") {
+            android {
+                buildFeatures {
+                    buildConfig true
+                }
+            }
+        }
+    }
+}
+`;
+    }
     return cfg;
   });
 }
@@ -76,6 +106,7 @@ function addMainApplication(config) {
 module.exports = function withWatermelonDB(config) {
   config = addSettingsGradle(config);
   config = addAppBuildGradle(config);
+  config = addProjectBuildGradle(config);
   config = addMainApplication(config);
   return config;
 };

@@ -25,14 +25,15 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      "./plugins/withWatermelonDB",
+      "./plugins/withWatermelonDB.js",
       [
-        "expo-splash-screen",
+        "expo-build-properties",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "android": {
+            "extraGradleProperties": {
+              "android.defaults.buildfeatures.buildconfig": "true"
+            }
+          }
         }
       ]
     ],
