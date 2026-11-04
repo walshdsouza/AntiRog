@@ -1,9 +1,6 @@
-import { Text, View } from 'react-native';
+import { AuthScreen } from '@/components/auth-screen';
 
+// Temporary: mounts the Auth screen so we can see it. Replace with real routing once sessions are wired up.
 export default function HomeScreen() {
-  return (
-    <View className="flex-1 items-center justify-center">
-      <Text className="text-3xl font-bold text-blue-500">Tailwind is working!</Text>
-    </View>
-  );
+  return <AuthScreen />;
 }
