@@ -1,3 +1,5 @@
+import '../../global.css';
+
 import { DatabaseProvider } from '@nozbe/watermelondb/DatabaseProvider';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
