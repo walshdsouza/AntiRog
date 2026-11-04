@@ -6,5 +6,6 @@ export default class Prescription extends Model {
 
   @text('medication') medication
   @text('dosage') dosage
+  @text('user_id') userId
   @readonly @date('created_at') createdAt
 }
