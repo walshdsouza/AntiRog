@@ -91,21 +91,20 @@ async function pullChanges({ lastPulledAt }) {
 
   const rows = await fetchChangedRows(since)
 
-  const created = []
+  // Everything live is sent as "updated" (with sendCreatedAsUpdated). Records this device pushed come back
+  // on the next pull; sending them as "created" would make WatermelonDB log an error for each one.
   const updated = []
   const deleted = []
   for (const row of rows) {
-    if (row.deleted_at !== null) {
+    if (row.deleted_at != null) {
       // Nothing to delete locally on the very first pull.
       if (lastPulledAt) deleted.push(row.id)
-    } else if (Number(row.server_created_at) > since) {
-      created.push(toRaw(row))
     } else {
       updated.push(toRaw(row))
     }
   }
 
-  return { changes: { [TABLE]: { created, updated, deleted } }, timestamp: Number(timestamp) }
+  return { changes: { [TABLE]: { created: [], updated, deleted } }, timestamp: Number(timestamp) }
 }
 
 async function pushChanges({ changes, lastPulledAt }) {
@@ -153,7 +152,7 @@ async function run() {
     if (error) throw error
     if (!data.session) return { ok: false, skipped: true, reason: 'not-signed-in' }
 
-    await synchronize({ database, pullChanges, pushChanges })
+    await synchronize({ database, pullChanges, pushChanges, sendCreatedAsUpdated: true })
     return { ok: true }
   } catch (error) {
     if (isOfflineError(error)) {
@@ -161,7 +160,8 @@ async function run() {
       console.log('[sync] Offline, skipping sync.')
       return { ok: false, offline: true }
     }
-    console.warn('[sync] Sync failed:', error)
+    // Surfaced to the user via the returned result; log quietly so it doesn't pop a LogBox warning.
+    console.log('[sync] Sync failed:', error?.message ?? error)
     return { ok: false, error }
   }
 }
