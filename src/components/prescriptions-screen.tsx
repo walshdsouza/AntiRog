@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ObservedPrescriptionList } from '@/components/prescription-list';
+import { ScanPrescription } from '@/components/scan-prescription';
 import { supabase } from '@/lib/supabase';
 import { syncData } from '@/lib/sync';
 
@@ -71,6 +72,8 @@ export function PrescriptionsScreen() {
           <Text className="text-sm font-medium text-blue-500">Sign out</Text>
         </Pressable>
       </View>
+
+      <ScanPrescription />
 
       <TextInput
         className={inputClass}
