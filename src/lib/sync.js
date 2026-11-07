@@ -15,6 +15,8 @@ import { database } from '../../database'
  *     user_id uuid not null references auth.users (id),
  *     standard_name text not null default '',      -- schema v3
  *     is_high_risk boolean not null default false, -- schema v3
+ *     reminder_enabled boolean not null default false, -- schema v5
+ *     reminder_minutes integer,                     -- schema v5, minutes after local midnight
  *     server_created_at bigint not null default 0, -- ms, set by trigger
  *     last_modified_at bigint not null default 0,  -- ms, set by trigger
  *     deleted_at bigint                            -- ms, soft delete
@@ -67,6 +69,8 @@ function toRaw(row) {
     // doesn't send would be reset to its default on every sync.
     standard_name: row.standard_name ?? '',
     is_high_risk: Boolean(row.is_high_risk),
+    reminder_enabled: Boolean(row.reminder_enabled),
+    reminder_minutes: row.reminder_minutes == null ? null : Number(row.reminder_minutes),
   }
 }
 

@@ -12,6 +12,9 @@ export type PrescriptionRecord = Model & {
   /** Canonical drug name from the curated interaction table; '' until matched. */
   standardName: string;
   isHighRisk: boolean;
+  reminderEnabled: boolean;
+  /** Minutes after local midnight; null until a time has been chosen. */
+  reminderMinutes: number | null;
   createdAt: Date;
 };
 

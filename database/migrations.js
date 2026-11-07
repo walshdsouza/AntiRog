@@ -38,5 +38,17 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 5,
+      steps: [
+        addColumns({
+          table: 'prescriptions',
+          columns: [
+            { name: 'reminder_enabled', type: 'boolean' },
+            { name: 'reminder_minutes', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 })

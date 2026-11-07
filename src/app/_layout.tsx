@@ -7,10 +7,12 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { SessionProvider, useSession } from '@/hooks/use-session';
+import { configureNotifications } from '@/lib/reminders';
 import { database } from '../../database';
 
 // Keep the native splash up until we know whether the user is signed in.
 SplashScreen.preventAutoHideAsync();
+configureNotifications();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

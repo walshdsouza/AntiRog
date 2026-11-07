@@ -1,5 +1,6 @@
 import { Q, type Database } from '@nozbe/watermelondb';
 
+import { cancelAllReminders } from '@/lib/reminders';
 import { supabase } from '@/lib/supabase';
 import { syncData } from '@/lib/sync';
 
@@ -47,6 +48,8 @@ export function clearLocalData(database: Database) {
     // Let any sync that is still running finish first, so it can't write the old account's data back
     // after the reset. Signed out, the follow-up sync is skipped.
     await syncData();
+    // Reminders name medications, so the next person on this phone must not receive them.
+    await cancelAllReminders();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
@@ -73,6 +76,7 @@ export function claimLocalData(database: Database, userId: string) {
 
     if (foreign > 0) {
       // No sync here: the new account is already signed in and must not push the old account's records.
+      await cancelAllReminders();
       await database.write(async () => {
         await database.unsafeResetDatabase();
       });

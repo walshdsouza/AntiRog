@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { DrugProfileCard } from '@/components/drug-profile-card';
+import { ReminderCard } from '@/components/reminder-card';
 import { deletePrescription, type PrescriptionRecord } from '@/lib/prescriptions';
 
 // findAndObserve emits the same model instance on every change, and React skips re-rendering for an
@@ -15,6 +16,8 @@ type Snapshot = {
   createdAt: Date;
   standardName: string;
   isHighRisk: boolean;
+  reminderEnabled: boolean;
+  reminderMinutes: number | null;
 };
 
 function snapshot(record: PrescriptionRecord): Snapshot {
@@ -25,6 +28,8 @@ function snapshot(record: PrescriptionRecord): Snapshot {
     createdAt: record.createdAt,
     standardName: record.standardName ?? '',
     isHighRisk: !!record.isHighRisk,
+    reminderEnabled: !!record.reminderEnabled,
+    reminderMinutes: record.reminderMinutes ?? null,
   };
 }
 
@@ -95,6 +100,8 @@ export default function PrescriptionDetailScreen() {
           Added {item.createdAt.toLocaleDateString(undefined, { dateStyle: 'medium' })}
         </Text>
       </View>
+
+      <ReminderCard record={item.record} enabled={item.reminderEnabled} minutes={item.reminderMinutes} />
 
       <DrugProfileCard standardName={item.standardName} isHighRisk={item.isHighRisk} />
 

@@ -27,6 +27,13 @@
     "plugins": [
       "./plugins/withWatermelonDB.js",
       [
+        "expo-notifications",
+        {
+          "color": "#3b82f6",
+          "enableRemoteNotifications": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "AntiRog needs access to your photos so you can choose a picture of a prescription to scan.",
