@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ObservedPrescriptionList } from '@/components/prescription-list';
 import { ScanPrescription } from '@/components/scan-prescription';
+import { savePrescription } from '@/lib/prescriptions';
 import { supabase } from '@/lib/supabase';
 import { syncData } from '@/lib/sync';
 
@@ -16,33 +17,8 @@ export function PrescriptionsScreen() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   async function save() {
-    const med = medication.trim();
-    const dose = dosage.trim();
-    if (!med || !dose) {
-      Alert.alert('Missing details', 'Enter both a medication and a dosage.');
-      return;
-    }
     try {
-      // getUser() asks the server, which fails offline; fall back to the session cached on the device.
-      let userId: string | undefined;
-      const { data: userData } = await supabase.auth.getUser();
-      userId = userData.user?.id;
-      if (!userId) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        userId = sessionData.session?.user.id;
-      }
-      if (!userId) {
-        Alert.alert('Not signed in', 'Sign in again to save prescriptions.');
-        return;
-      }
-
-      await database.write(async () => {
-        await database.get('prescriptions').create((record: any) => {
-          record.medication = med;
-          record.dosage = dose;
-          record.userId = userId;
-        });
-      });
+      await savePrescription(database, { medication, dosage });
       setMedication('');
       setDosage('');
     } catch (e) {
@@ -73,46 +49,51 @@ export function PrescriptionsScreen() {
         </Pressable>
       </View>
 
-      <ScanPrescription />
+      <ObservedPrescriptionList
+        database={database}
+        header={
+          <View>
+            <ScanPrescription />
 
-      <TextInput
-        className={inputClass}
-        placeholder="Medication"
-        placeholderTextColor="#9ca3af"
-        value={medication}
-        onChangeText={setMedication}
+            <TextInput
+              className={inputClass}
+              placeholder="Medication"
+              placeholderTextColor="#9ca3af"
+              value={medication}
+              onChangeText={setMedication}
+            />
+            <TextInput
+              className={inputClass}
+              placeholder="Dosage (e.g. 500 mg twice daily)"
+              placeholderTextColor="#9ca3af"
+              value={dosage}
+              onChangeText={setDosage}
+            />
+
+            <View className="mb-2 flex-row gap-3">
+              <Pressable
+                accessibilityRole="button"
+                onPress={save}
+                className="flex-1 items-center rounded-xl bg-blue-500 py-3.5 active:opacity-80">
+                <Text className="text-base font-semibold text-white">Save</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={syncing}
+                onPress={sync}
+                className={`flex-1 items-center rounded-xl border border-blue-500 py-3.5 active:opacity-80 ${syncing ? 'opacity-60' : ''}`}>
+                {syncing ? (
+                  <ActivityIndicator color="#3b82f6" />
+                ) : (
+                  <Text className="text-base font-semibold text-blue-500">Sync Data</Text>
+                )}
+              </Pressable>
+            </View>
+
+            <Text className="mb-4 min-h-5 text-sm text-gray-500 dark:text-gray-400">{syncMessage ?? ' '}</Text>
+          </View>
+        }
       />
-      <TextInput
-        className={inputClass}
-        placeholder="Dosage (e.g. 500 mg twice daily)"
-        placeholderTextColor="#9ca3af"
-        value={dosage}
-        onChangeText={setDosage}
-      />
-
-      <View className="mb-2 flex-row gap-3">
-        <Pressable
-          accessibilityRole="button"
-          onPress={save}
-          className="flex-1 items-center rounded-xl bg-blue-500 py-3.5 active:opacity-80">
-          <Text className="text-base font-semibold text-white">Save</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          disabled={syncing}
-          onPress={sync}
-          className={`flex-1 items-center rounded-xl border border-blue-500 py-3.5 active:opacity-80 ${syncing ? 'opacity-60' : ''}`}>
-          {syncing ? (
-            <ActivityIndicator color="#3b82f6" />
-          ) : (
-            <Text className="text-base font-semibold text-blue-500">Sync Data</Text>
-          )}
-        </Pressable>
-      </View>
-
-      <Text className="mb-4 min-h-5 text-sm text-gray-500 dark:text-gray-400">{syncMessage ?? ' '}</Text>
-
-      <ObservedPrescriptionList database={database} />
     </SafeAreaView>
   );
 }
