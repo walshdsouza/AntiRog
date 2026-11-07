@@ -140,9 +140,33 @@ async function pushChanges({ changes, lastPulledAt }) {
     if (error) throw toError(error)
   }
 
-  if (deleted.length) {
-    const { error } = await supabase.from(TABLE).update({ deleted_at: Date.now() }).in('id', deleted)
-    if (error) throw toError(error)
+  if (deleted.length) await pushDeletions(deleted)
+}
+
+/*
+ * Deletions are soft: the row stays and gets deleted_at, which bumps last_modified_at via the trigger.
+ * That is how other devices learn about the deletion on their next pull (a hard DELETE would leave
+ * them holding the record forever). The pull never returns soft-deleted rows as live records.
+ */
+async function pushDeletions(ids) {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({ deleted_at: Date.now() })
+    .in('id', ids)
+    .select('id')
+  if (error) throw toError(error)
+
+  const missing = ids.filter((id) => !data.some((row) => row.id === id))
+  if (!missing.length) return
+
+  // Row-level security turns a forbidden UPDATE into a silent no-op. If those rows are still visible,
+  // the deletion was blocked, so fail loudly; rows that never reached the server need nothing.
+  const { data: blocked, error: checkError } = await supabase.from(TABLE).select('id').in('id', missing)
+  if (checkError) throw toError(checkError)
+  if (blocked.length) {
+    throw new Error(
+      `Supabase refused to delete ${blocked.length} prescription(s). Check the UPDATE policy on public.${TABLE}.`,
+    )
   }
 }
 
@@ -167,17 +191,24 @@ async function run() {
 }
 
 let inFlight = null
+let queued = null
 
 /**
  * Syncs the local WatermelonDB with Supabase. Never throws.
  * Resolves to { ok: true } or { ok: false, offline | skipped | error }.
  */
 export function syncData() {
-  // Overlapping syncs would race each other, so share the one already running.
-  if (!inFlight) {
-    inFlight = run().finally(() => {
-      inFlight = null
+  // Overlapping syncs would race each other. A sync that is already running may have collected its
+  // local changes before this call, so queue exactly one follow-up run instead of sharing it.
+  if (inFlight) {
+    queued ??= inFlight.then(() => {
+      queued = null
+      return syncData()
     })
+    return queued
   }
+  inFlight = run().finally(() => {
+    inFlight = null
+  })
   return inFlight
 }

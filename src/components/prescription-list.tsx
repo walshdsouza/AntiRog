@@ -1,35 +1,41 @@
-import { Q, type Database, type Model } from '@nozbe/watermelondb';
+import { Q, type Database } from '@nozbe/watermelondb';
 import { withObservables } from '@nozbe/watermelondb/react';
+import { Link } from 'expo-router';
 import type { ReactElement } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, Pressable, Text } from 'react-native';
 
-// The model classes are plain JS (database/Prescription.js), so describe the fields we read here.
-type PrescriptionRow = Model & {
-  medication: string;
-  dosage: string;
-};
+import type { PrescriptionRecord } from '@/lib/prescriptions';
 
-function PrescriptionList({ prescriptions, header }: { prescriptions: Model[]; header?: ReactElement }) {
+function PrescriptionList({
+  prescriptions,
+  header,
+}: {
+  prescriptions: PrescriptionRecord[];
+  header?: ReactElement;
+}) {
   return (
     <FlatList
-      data={prescriptions as PrescriptionRow[]}
+      data={prescriptions}
       keyExtractor={(item) => item.id}
       contentContainerClassName="gap-3 pb-6"
+      contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
-      // Passed as an element (not a component) so the form inputs keep focus across renders.
       ListHeaderComponent={header}
       ListEmptyComponent={
         <Text className="mt-6 text-center text-gray-500 dark:text-gray-400">
-          No prescriptions yet. Add one above.
+          No prescriptions yet. Scan or add one from the Scan tab.
         </Text>
       }
       renderItem={({ item }) => (
-        <View className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
-          <Text className="text-base font-semibold text-gray-900 dark:text-white">
-            {item.medication}
-          </Text>
-          <Text className="text-sm text-gray-600 dark:text-gray-400">{item.dosage}</Text>
-        </View>
+        <Link href={{ pathname: '/prescription/[id]', params: { id: item.id } }} asChild>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityHint="Opens prescription details"
+            className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 active:opacity-70 dark:border-gray-800 dark:bg-gray-900">
+            <Text className="text-base font-semibold text-gray-900 dark:text-white">{item.medication}</Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400">{item.dosage}</Text>
+          </Pressable>
+        </Link>
       )}
     />
   );
@@ -39,7 +45,7 @@ function PrescriptionList({ prescriptions, header }: { prescriptions: Model[]; h
 // (including changes that arrive from a sync).
 const enhance = withObservables([], ({ database }: { database: Database; header?: ReactElement }) => ({
   prescriptions: database
-    .get('prescriptions')
+    .get<PrescriptionRecord>('prescriptions')
     .query(Q.sortBy('created_at', Q.desc))
     .observeWithColumns(['medication', 'dosage']),
 }));

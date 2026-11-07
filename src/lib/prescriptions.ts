@@ -1,6 +1,24 @@
-import type { Database } from '@nozbe/watermelondb';
+import type { Database, Model } from '@nozbe/watermelondb';
 
 import { supabase } from '@/lib/supabase';
+import { syncData } from '@/lib/sync';
+
+// The model class is plain JS (database/Prescription.js), so describe its fields here.
+export type PrescriptionRecord = Model & {
+  medication: string;
+  dosage: string;
+  userId: string;
+  createdAt: Date;
+};
+
+/** Soft-deletes a prescription so the deletion syncs to Supabase and other devices. */
+export async function deletePrescription(database: Database, record: PrescriptionRecord) {
+  await database.write(async () => {
+    await record.markAsDeleted();
+  });
+  // Push right away; offline, the deletion stays queued locally until the next sync.
+  void syncData();
+}
 
 /** Saves one prescription to WatermelonDB for the signed-in user. Throws an Error with a user-facing message. */
 export async function savePrescription(
@@ -32,4 +50,5 @@ export async function savePrescription(
       record.userId = userId;
     });
   });
+  void syncData();
 }
