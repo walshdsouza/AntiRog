@@ -8,6 +8,9 @@ export type PrescriptionRecord = Model & {
   medication: string;
   dosage: string;
   userId: string;
+  /** Canonical drug name from the curated interaction table; '' until matched. */
+  standardName: string;
+  isHighRisk: boolean;
   createdAt: Date;
 };
 

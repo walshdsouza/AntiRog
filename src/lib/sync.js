@@ -13,6 +13,8 @@ import { database } from '../../database'
  *     dosage text not null default '',
  *     created_at bigint not null,                  -- ms, set by the app
  *     user_id uuid not null references auth.users (id),
+ *     standard_name text not null default '',      -- schema v3
+ *     is_high_risk boolean not null default false, -- schema v3
  *     server_created_at bigint not null default 0, -- ms, set by trigger
  *     last_modified_at bigint not null default 0,  -- ms, set by trigger
  *     deleted_at bigint                            -- ms, soft delete
@@ -61,6 +63,10 @@ function toRaw(row) {
     dosage: row.dosage,
     created_at: Number(row.created_at),
     user_id: row.user_id ?? '',
+    // Must round-trip through Supabase: a pull replaces the whole local row, so a column the server
+    // doesn't send would be reset to its default on every sync.
+    standard_name: row.standard_name ?? '',
+    is_high_risk: Boolean(row.is_high_risk),
   }
 }
 
