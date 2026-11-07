@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'users',
@@ -21,6 +21,18 @@ export const schema = appSchema({
         { name: 'standard_name', type: 'string' },
         { name: 'is_high_risk', type: 'boolean', isIndexed: true },
       ]
-    })
+    }),
+    // Curated reference data, seeded on the device from src/lib/interaction-data.ts. Never synced.
+    // drug_a < drug_b (standard names), so each pair is stored once.
+    tableSchema({
+      name: 'interaction_pairs',
+      columns: [
+        { name: 'drug_a', type: 'string', isIndexed: true },
+        { name: 'drug_b', type: 'string', isIndexed: true },
+        { name: 'severity', type: 'string' },
+        { name: 'summary', type: 'string' },
+        { name: 'advice', type: 'string' },
+      ]
+    }),
   ]
 })

@@ -4,6 +4,7 @@ import { schema } from './schema'
 import migrations from './migrations'
 import User from './User'
 import Prescription from './Prescription'
+import InteractionPair from './InteractionPair'
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -16,5 +17,5 @@ const adapter = new SQLiteAdapter({
 
 export const database = new Database({
   adapter,
-  modelClasses: [User, Prescription],
+  modelClasses: [User, Prescription, InteractionPair],
 })

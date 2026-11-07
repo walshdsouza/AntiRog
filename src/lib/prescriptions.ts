@@ -1,5 +1,6 @@
 import type { Database, Model } from '@nozbe/watermelondb';
 
+import { matchDrug } from '@/lib/interactions';
 import { supabase } from '@/lib/supabase';
 import { syncData } from '@/lib/sync';
 
@@ -46,11 +47,14 @@ export async function savePrescription(
   }
   if (!userId) throw new Error('Sign in again to save prescriptions.');
 
+  const { standardName, isHighRisk } = matchDrug(med);
   await database.write(async () => {
-    await database.get('prescriptions').create((record: any) => {
+    await database.get<PrescriptionRecord>('prescriptions').create((record) => {
       record.medication = med;
       record.dosage = dose;
       record.userId = userId;
+      record.standardName = standardName;
+      record.isHighRisk = isHighRisk;
     });
   });
   void syncData();
