@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { DoseLogCard } from '@/components/dose-log';
 import { DrugProfileCard } from '@/components/drug-profile-card';
 import { ReminderCard } from '@/components/reminder-card';
 import { deletePrescription, type PrescriptionRecord } from '@/lib/prescriptions';
@@ -100,6 +101,8 @@ export default function PrescriptionDetailScreen() {
           Added {item.createdAt.toLocaleDateString(undefined, { dateStyle: 'medium' })}
         </Text>
       </View>
+
+      <DoseLogCard prescriptionId={item.record.id} />
 
       <ReminderCard record={item.record} enabled={item.reminderEnabled} minutes={item.reminderMinutes} />
 

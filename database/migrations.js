@@ -50,5 +50,20 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 6,
+      steps: [
+        createTable({
+          name: 'dose_events',
+          columns: [
+            { name: 'prescription_id', type: 'string', isIndexed: true },
+            { name: 'user_id', type: 'string' },
+            { name: 'scheduled_at', type: 'number', isIndexed: true },
+            { name: 'status', type: 'string' },
+            { name: 'recorded_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 })

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 5,
+  version: 6,
   tables: [
     tableSchema({
       name: 'users',
@@ -23,6 +23,21 @@ export const schema = appSchema({
         // Daily reminder. Minutes after local midnight (e.g. 540 = 9:00); null until first set.
         { name: 'reminder_enabled', type: 'boolean' },
         { name: 'reminder_minutes', type: 'number', isOptional: true },
+      ]
+    }),
+    // One outcome per scheduled dose, synced to Supabase (public.dose_events). The id is
+    // `${prescription_id}_${scheduled_at}`, so the same dose logged on two devices is one record.
+    tableSchema({
+      name: 'dose_events',
+      columns: [
+        { name: 'prescription_id', type: 'string', isIndexed: true },
+        { name: 'user_id', type: 'string' },
+        // ms. The day's reminder time when the dose was logged.
+        { name: 'scheduled_at', type: 'number', isIndexed: true },
+        // 'taken' | 'skipped' (the server may also hold 'missed').
+        { name: 'status', type: 'string' },
+        // ms, device clock.
+        { name: 'recorded_at', type: 'number' },
       ]
     }),
     // Curated reference data, seeded on the device from src/lib/interaction-data.ts. Never synced.
