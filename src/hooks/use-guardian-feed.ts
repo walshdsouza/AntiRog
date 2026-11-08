@@ -40,6 +40,8 @@ export type GuardianFeedStatus = 'idle' | 'connecting' | 'live' | 'reconnecting'
 export type GuardianFeed = {
   /** Patients this account is a guardian of. */
   links: GuardianLink[];
+  /** False until the links have loaded once (so an empty `links` really means "none"). */
+  loaded: boolean;
   /** Live prescriptions of every linked patient, newest first. */
   prescriptions: PatientPrescription[];
   /** Dose events of every linked patient from the last week, newest scheduled time first. */
@@ -312,6 +314,7 @@ export function useGuardianFeed(options: { onAlert?: (alert: GuardianAlert) => v
   const current = feedKey && feed?.key === feedKey ? feed : null;
   return {
     links,
+    loaded: !!userId && linkState?.userId === userId,
     prescriptions: current?.prescriptions ?? NO_PRESCRIPTIONS,
     doses: current?.doses ?? NO_DOSES,
     status: !feedKey ? 'idle' : (current?.status ?? 'connecting'),

@@ -46,7 +46,10 @@ export function useReminderScheduler() {
   }, [database]);
 }
 
-/** Opens the prescription when a reminder is tapped, including when the tap launched the app. */
+/** Screens a notification may open: reminders open a prescription, guardian alerts open a patient. */
+const TAP_TARGETS = ['/prescription/', '/guardian/patient/'];
+
+/** Opens the screen a notification points to when tapped, including when the tap launched the app. */
 export function useReminderTaps() {
   const router = useRouter();
 
@@ -55,7 +58,7 @@ export function useReminderTaps() {
 
     function open(response: Notifications.NotificationResponse | null) {
       const url = response?.notification.request.content.data?.url;
-      if (typeof url === 'string' && url.startsWith('/prescription/')) {
+      if (typeof url === 'string' && TAP_TARGETS.some((prefix) => url.startsWith(prefix))) {
         router.push(url as Href);
       }
       void Notifications.clearLastNotificationResponseAsync();

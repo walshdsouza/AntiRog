@@ -1,9 +1,10 @@
 import { useDatabase } from '@nozbe/watermelondb/react';
 import { hasUnsyncedChanges } from '@nozbe/watermelondb/sync';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GuardianSharing } from '@/components/guardian-sharing';
 import { useSession } from '@/hooks/use-session';
 import { signOutAndClear } from '@/lib/local-data';
 import { syncData } from '@/lib/sync';
@@ -68,51 +69,57 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white px-6 pt-4 dark:bg-black">
-      <Text className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">Profile</Text>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-black">
+      <ScrollView contentContainerClassName="px-6 pb-6 pt-4" contentInsetAdjustmentBehavior="automatic">
+        <Text className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">Profile</Text>
 
-      <View className="mb-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
-        <Text className="text-sm text-gray-500 dark:text-gray-400">Signed in as</Text>
-        <Text selectable className="text-base font-semibold text-gray-900 dark:text-white">
-          {session?.user.email ?? 'Unknown account'}
+        <View className="mb-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+          <Text className="text-sm text-gray-500 dark:text-gray-400">Signed in as</Text>
+          <Text selectable className="text-base font-semibold text-gray-900 dark:text-white">
+            {session?.user.email ?? 'Unknown account'}
+          </Text>
+        </View>
+
+        <View className="mb-6">
+          <GuardianSharing />
+        </View>
+
+        <Text className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">Sync</Text>
+        <Text className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+          Your vault syncs automatically when you open the app. You can also sync now.
         </Text>
-      </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ busy: syncing, disabled: syncing }}
+          disabled={syncing}
+          onPress={sync}
+          className={`items-center rounded-xl border border-blue-500 py-3.5 active:opacity-80 ${syncing ? 'opacity-60' : ''}`}>
+          {syncing ? (
+            <ActivityIndicator color="#3b82f6" />
+          ) : (
+            <Text className="text-base font-semibold text-blue-500">Sync Now</Text>
+          )}
+        </Pressable>
+        <Text accessibilityLiveRegion="polite" className="mb-6 mt-2 min-h-5 text-sm text-gray-500 dark:text-gray-400">
+          {syncMessage ?? ' '}
+        </Text>
 
-      <Text className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">Sync</Text>
-      <Text className="mb-3 text-sm text-gray-500 dark:text-gray-400">
-        Your vault syncs automatically when you open the app. You can also sync now.
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ busy: syncing, disabled: syncing }}
-        disabled={syncing}
-        onPress={sync}
-        className={`items-center rounded-xl border border-blue-500 py-3.5 active:opacity-80 ${syncing ? 'opacity-60' : ''}`}>
-        {syncing ? (
-          <ActivityIndicator color="#3b82f6" />
-        ) : (
-          <Text className="text-base font-semibold text-blue-500">Sync Now</Text>
-        )}
-      </Pressable>
-      <Text accessibilityLiveRegion="polite" className="mb-6 mt-2 min-h-5 text-sm text-gray-500 dark:text-gray-400">
-        {syncMessage ?? ' '}
-      </Text>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ busy: signingOut, disabled: signingOut }}
-        disabled={signingOut}
-        onPress={confirmSignOut}
-        className={`items-center rounded-xl border border-red-500 py-3.5 active:opacity-80 ${signingOut ? 'opacity-60' : ''}`}>
-        {signingOut ? (
-          <ActivityIndicator color="#ef4444" />
-        ) : (
-          <Text className="text-base font-semibold text-red-500">Sign Out</Text>
-        )}
-      </Pressable>
-      <Text className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Signing out removes your vault from this phone. It stays backed up in your account.
-      </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ busy: signingOut, disabled: signingOut }}
+          disabled={signingOut}
+          onPress={confirmSignOut}
+          className={`items-center rounded-xl border border-red-500 py-3.5 active:opacity-80 ${signingOut ? 'opacity-60' : ''}`}>
+          {signingOut ? (
+            <ActivityIndicator color="#ef4444" />
+          ) : (
+            <Text className="text-base font-semibold text-red-500">Sign Out</Text>
+          )}
+        </Pressable>
+        <Text className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Signing out removes your vault from this phone. It stays backed up in your account.
+        </Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }

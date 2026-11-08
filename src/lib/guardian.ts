@@ -159,3 +159,47 @@ export async function fetchPatientSnapshot(patientIds: string[]) {
     doses: doses.data.map(toDoseEvent),
   };
 }
+
+/** The patient's unused, unexpired invite code, if there is one. */
+export async function fetchActiveInvite(userId: string): Promise<GuardianInvite | null> {
+  const { data, error } = await supabase
+    .from('guardian_invites')
+    .select('*')
+    .eq('patient_id', userId)
+    .is('used_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw toError(error);
+  return data as GuardianInvite | null;
+}
+
+/** Revokes the patient's unused invite codes. */
+export async function revokeInvites(userId: string) {
+  const { error } = await supabase.from('guardian_invites').delete().eq('patient_id', userId).is('used_at', null);
+  if (error) throw toError(error);
+}
+
+/** "ABCDEFGH" → "ABCD-EFGH", easier to read out loud. */
+export function formatInviteCode(code: string) {
+  return code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
+}
+
+/** How the guardian sees a patient (and vice versa). Emails are the only names the server has. */
+export function patientLabel(link: GuardianLink) {
+  return link.patient_email || 'Linked patient';
+}
+
+export function guardianLabel(link: GuardianLink) {
+  return link.guardian_email || 'Guardian';
+}
+
+/** Turns network failures into something a person can act on. */
+export function friendlyError(e: unknown) {
+  const message = e instanceof Error ? e.message : String(e);
+  if (/network request failed|failed to fetch|timed out|offline/i.test(message)) {
+    return 'You appear to be offline. Connect to the internet and try again.';
+  }
+  return message || 'Something went wrong.';
+}
