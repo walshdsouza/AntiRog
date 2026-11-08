@@ -37,7 +37,9 @@ import { database } from '../../database'
  *     on public.prescriptions for each row execute function public.prescriptions_touch();
  *
  *   alter table public.prescriptions enable row level security;
- *   -- plus policies, e.g. allow select/insert/update for authenticated users.
+ *
+ * Row-level security policies (owner-only, plus read access for linked guardians) live in
+ * supabase/migrations/.
  */
 
 const TABLE = 'prescriptions'
@@ -75,12 +77,15 @@ function toRaw(row) {
 }
 
 // PostgREST caps responses (1000 rows by default), so page through the changes.
-async function fetchChangedRows(since) {
+// Filtered to the signed-in user: RLS also lets guardians read their patients' prescriptions, and
+// those must never land in the guardian's own vault.
+async function fetchChangedRows(userId, since) {
   const rows = []
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from(TABLE)
       .select('*')
+      .eq('user_id', userId)
       .gt('last_modified_at', since)
       .order('last_modified_at')
       .order('id')
@@ -92,14 +97,14 @@ async function fetchChangedRows(since) {
   return rows
 }
 
-async function pullChanges({ lastPulledAt }) {
+async function pullChanges(userId, { lastPulledAt }) {
   const since = lastPulledAt ?? 0
 
   // The timestamp must come from the server and be taken BEFORE reading changes.
   const { data: timestamp, error: timeError } = await supabase.rpc('sync_now')
   if (timeError) throw toError(timeError)
 
-  const rows = await fetchChangedRows(since)
+  const rows = await fetchChangedRows(userId, since)
 
   // Everything live is sent as "updated" (with sendCreatedAsUpdated). Records this device pushed come back
   // on the next pull; sending them as "created" would make WatermelonDB log an error for each one.
@@ -186,7 +191,13 @@ async function run() {
     if (error) throw error
     if (!data.session) return { ok: false, skipped: true, reason: 'not-signed-in' }
 
-    await synchronize({ database, pullChanges, pushChanges, sendCreatedAsUpdated: true })
+    const userId = data.session.user.id
+    await synchronize({
+      database,
+      pullChanges: (params) => pullChanges(userId, params),
+      pushChanges,
+      sendCreatedAsUpdated: true,
+    })
     return { ok: true }
   } catch (error) {
     if (isOfflineError(error)) {
