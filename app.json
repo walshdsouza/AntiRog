@@ -37,14 +37,14 @@
         "expo-image-picker",
         {
           "photosPermission": "AntiRog needs access to your photos so you can choose a picture of a prescription to scan.",
-          "cameraPermission": "AntiRog needs camera access so you can photograph a prescription to scan.",
+          "cameraPermission": "AntiRog needs camera access so you can scan prescriptions and identify pills.",
           "microphonePermission": false
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "AntiRog needs camera access so you can photograph a prescription to scan.",
+          "cameraPermission": "AntiRog needs camera access so you can scan prescriptions and identify pills.",
           "recordAudioAndroid": false
         }
       ],
@@ -52,12 +52,12 @@
         "expo-build-properties",
         {
           "android": {
-            "extraGradleProperties": {
-              "android.defaults.buildfeatures.buildconfig": "true"
-            }
+            "minSdkVersion": 26
           }
         }
-      ]
+      ],
+      "react-native-fast-tflite",
+      "./plugins/with-android-shaders"
     ],
     "experiments": {
       "typedRoutes": true,
