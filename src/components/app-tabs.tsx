@@ -11,9 +11,10 @@ export default function AppTabs() {
     <NativeTabs
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="(vault)">
-        <NativeTabs.Trigger.Label>Vault</NativeTabs.Trigger.Label>
+      iconColor={{ default: colors.textSecondary, selected: colors.tint }}
+      labelStyle={{ default: { color: colors.textSecondary }, selected: { color: colors.tint, fontWeight: '600' } }}>
+      <NativeTabs.Trigger name="(medications)">
+        <NativeTabs.Trigger.Label>Medications</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'pills', selected: 'pills.fill' }} md="medication" />
       </NativeTabs.Trigger>
 
@@ -22,17 +23,17 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="doc.viewfinder" md="document_scanner" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="interactions">
-        <NativeTabs.Trigger.Label>Interactions</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'exclamationmark.triangle', selected: 'exclamationmark.triangle.fill' }}
-          md="warning"
-        />
+      <NativeTabs.Trigger name="visits">
+        <NativeTabs.Trigger.Label>Visits</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'stethoscope', selected: 'stethoscope' }} md="local_hospital" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="guardian">
-        <NativeTabs.Trigger.Label>Guardian</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} md="supervisor_account" />
+      <NativeTabs.Trigger name="reports">
+        <NativeTabs.Trigger.Label>Reports</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'chart.bar.doc.horizontal', selected: 'chart.bar.doc.horizontal.fill' }}
+          md="analytics"
+        />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">

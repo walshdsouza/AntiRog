@@ -66,14 +66,6 @@ export const STATE_LABEL: Record<DoseState, string> = {
 };
 
 /** NativeWind classes for a state's badge. */
-export const STATE_BADGE: Record<DoseState, { box: string; text: string }> = {
-  taken: { box: 'bg-green-100 dark:bg-green-950', text: 'text-green-700 dark:text-green-400' },
-  skipped: { box: 'bg-gray-200 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300' },
-  missed: { box: 'bg-red-100 dark:bg-red-950', text: 'text-red-700 dark:text-red-400' },
-  unlogged: { box: 'bg-amber-100 dark:bg-amber-950', text: 'text-amber-700 dark:text-amber-400' },
-  upcoming: { box: 'bg-blue-50 dark:bg-blue-950', text: 'text-blue-700 dark:text-blue-400' },
-};
-
 export function formatTime(ms: number) {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }

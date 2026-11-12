@@ -47,7 +47,12 @@ export function useReminderScheduler() {
 }
 
 /** Screens a notification may open: reminders open a prescription, guardian alerts open a patient. */
-const TAP_TARGETS = ['/prescription/', '/guardian/patient/'];
+const TAP_TARGETS = ['/prescription/', '/profile/guardian/patient/'];
+
+/** Alerts delivered before the Guardian screens moved into Profile still carry the old path. */
+function currentUrl(url: string) {
+  return url.startsWith('/guardian/patient/') ? `/profile${url}` : url;
+}
 
 /** Opens the screen a notification points to when tapped, including when the tap launched the app. */
 export function useReminderTaps() {
@@ -57,8 +62,9 @@ export function useReminderTaps() {
     let active = true;
 
     function open(response: Notifications.NotificationResponse | null) {
-      const url = response?.notification.request.content.data?.url;
-      if (typeof url === 'string' && TAP_TARGETS.some((prefix) => url.startsWith(prefix))) {
+      const raw = response?.notification.request.content.data?.url;
+      const url = typeof raw === 'string' ? currentUrl(raw) : null;
+      if (url && TAP_TARGETS.some((prefix) => url.startsWith(prefix))) {
         router.push(url as Href);
       }
       void Notifications.clearLastNotificationResponseAsync();

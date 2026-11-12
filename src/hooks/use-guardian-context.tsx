@@ -51,7 +51,7 @@ async function notify(alert: GuardianAlert) {
       title: alert.kind === 'dose-missed' ? `${who} missed a dose` : `${who} skipped a dose`,
       body: `${medication}, due ${when}`,
       sound: 'default',
-      data: { url: `/guardian/patient/${alert.link.patient_id}` },
+      data: { url: `/profile/guardian/patient/${alert.link.patient_id}` },
     },
     // Show now, on the guardian channel.
     trigger: Platform.OS === 'android' ? { channelId: CHANNEL_ID } : null,

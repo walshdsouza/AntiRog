@@ -15,6 +15,8 @@ export type PrescriptionRecord = Model & {
   reminderEnabled: boolean;
   /** Minutes after local midnight; null until a time has been chosen. */
   reminderMinutes: number | null;
+  /** The visit this prescription was added from, if any. */
+  visitId: string | null;
   createdAt: Date;
 };
 
@@ -30,7 +32,7 @@ export async function deletePrescription(database: Database, record: Prescriptio
 /** Saves one prescription to WatermelonDB for the signed-in user. Throws an Error with a user-facing message. */
 export async function savePrescription(
   database: Database,
-  { medication, dosage }: { medication: string; dosage: string },
+  { medication, dosage, visitId }: { medication: string; dosage: string; visitId?: string | null },
 ) {
   const med = medication.trim();
   const dose = dosage.trim();
@@ -58,6 +60,7 @@ export async function savePrescription(
       record.userId = userId;
       record.standardName = standardName;
       record.isHighRisk = isHighRisk;
+      if (visitId) record.visitId = visitId;
     });
   });
   void syncData();

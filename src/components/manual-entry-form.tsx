@@ -1,58 +1,62 @@
 import { useDatabase } from '@nozbe/watermelondb/react';
 import { useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
+import { Card, FieldLabel, NeuButton, NeuInput, SectionTitle } from '@/components/neu';
 import { savePrescription } from '@/lib/prescriptions';
 
-const inputClass =
-  'mb-3 rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
-
-/** Type a medication and dosage by hand and save it to the vault. */
-export function ManualEntryForm() {
+/** Type a medication and dosage by hand and save it. `visitId` links it to the visit it came from. */
+export function ManualEntryForm({ visitId }: { visitId?: string }) {
   const database = useDatabase();
   const [medication, setMedication] = useState('');
   const [dosage, setDosage] = useState('');
+  const [saving, setSaving] = useState(false);
   const [savedName, setSavedName] = useState<string | null>(null);
 
   async function save() {
+    if (saving) return;
+    setSaving(true);
     try {
-      await savePrescription(database, { medication, dosage });
+      await savePrescription(database, { medication, dosage, visitId });
       setSavedName(medication.trim());
       setMedication('');
       setDosage('');
     } catch (e) {
       Alert.alert('Could not save', e instanceof Error ? e.message : 'Something went wrong.');
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
-    <View>
-      <Text className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Add manually</Text>
-      <TextInput
-        className={inputClass}
-        placeholder="Medication"
-        placeholderTextColor="#9ca3af"
-        value={medication}
-        onChangeText={(value) => {
-          setMedication(value);
-          setSavedName(null);
-        }}
-      />
-      <TextInput
-        className={inputClass}
-        placeholder="Dosage (e.g. 500 mg twice daily)"
-        placeholderTextColor="#9ca3af"
-        value={dosage}
-        onChangeText={setDosage}
-      />
-      <Pressable
-        accessibilityRole="button"
-        onPress={save}
-        className="items-center rounded-xl bg-blue-500 py-3.5 active:opacity-80">
-        <Text className="text-base font-semibold text-white">Save</Text>
-      </Pressable>
-      <Text accessibilityLiveRegion="polite" className="mt-2 min-h-5 text-sm text-gray-500 dark:text-gray-400">
-        {savedName ? `${savedName} saved to your vault.` : ' '}
+    <View className="gap-3">
+      <SectionTitle>Add by hand</SectionTitle>
+      <Card className="gap-4 px-4 py-5">
+        <View>
+          <FieldLabel>Medication</FieldLabel>
+          <NeuInput
+            placeholder="e.g. Metformin"
+            value={medication}
+            onChangeText={(value) => {
+              setMedication(value);
+              setSavedName(null);
+            }}
+            accessibilityLabel="Medication"
+          />
+        </View>
+        <View>
+          <FieldLabel>Dosage</FieldLabel>
+          <NeuInput
+            placeholder="e.g. 500 mg twice daily"
+            value={dosage}
+            onChangeText={setDosage}
+            accessibilityLabel="Dosage"
+          />
+        </View>
+        <NeuButton title="Save Medication" variant="primary" loading={saving} onPress={save} />
+      </Card>
+      <Text accessibilityLiveRegion="polite" className="min-h-5 px-1 text-sm text-success dark:text-success-dark">
+        {savedName ? `${savedName} added to your medications.` : ' '}
       </Text>
     </View>
   );

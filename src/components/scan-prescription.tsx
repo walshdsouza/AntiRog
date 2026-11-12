@@ -3,8 +3,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { cssInterop } from 'nativewind';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Text, View } from 'react-native';
 
+import { Card, Inset, NeuButton, SectionTitle } from '@/components/neu';
 import { extractMedications, type ExtractedMedication } from '@/lib/gemini';
 import { savePrescription } from '@/lib/prescriptions';
 
@@ -40,9 +41,10 @@ function showSettingsPrompt(what: string) {
 
 /**
  * "Scan Prescription" button: take a photo or pick one from the gallery, preview it, send it to
- * Gemini, and list every medication found, each with its own Save button.
+ * Gemini, and list every medication found, each with its own Save button. `visitId` links saved
+ * medications to the visit they came from.
  */
-export function ScanPrescription() {
+export function ScanPrescription({ visitId }: { visitId?: string }) {
   const database = useDatabase();
   const [image, setImage] = useState<Picked | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -83,7 +85,7 @@ export function ScanPrescription() {
   async function saveItem(item: Item) {
     updateItem(item.key, { state: 'saving', error: undefined });
     try {
-      await savePrescription(database, item);
+      await savePrescription(database, { medication: item.medication, dosage: item.dosage, visitId });
       updateItem(item.key, { state: 'saved' });
     } catch (e) {
       updateItem(item.key, {
@@ -145,22 +147,19 @@ export function ScanPrescription() {
   }
 
   return (
-    <View className="mb-4">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ busy: processing, disabled: processing }}
-        disabled={processing}
+    <View className="gap-3">
+      <SectionTitle>From a prescription photo</SectionTitle>
+      <NeuButton
+        title={processing ? 'Reading prescription…' : 'Scan Prescription'}
+        subtitle={processing ? undefined : 'Photo or gallery · read with AI'}
+        variant="primary"
+        loading={processing}
         onPress={scan}
-        className={`flex-row items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 active:opacity-80 ${processing ? 'opacity-70' : ''}`}>
-        {processing && <ActivityIndicator color="#ffffff" />}
-        <Text className="text-base font-semibold text-white">
-          {processing ? 'Reading prescription…' : 'Scan Prescription'}
-        </Text>
-      </Pressable>
+      />
 
       {image && (
-        <View className="mt-3 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-          <View className="h-48 w-full bg-gray-100 dark:bg-gray-900">
+        <Card className="gap-3 p-3">
+          <Inset radius={16} className="h-48 overflow-hidden p-0">
             <Image
               source={{ uri: image.uri }}
               className="h-48 w-full"
@@ -173,66 +172,51 @@ export function ScanPrescription() {
                 <Text className="mt-2 text-sm font-medium text-white">Analyzing with AI…</Text>
               </View>
             )}
-          </View>
-          <View className="flex-row items-center justify-between bg-gray-50 px-4 py-2 dark:bg-gray-900">
-            <Text className="text-sm text-gray-600 dark:text-gray-400">
+          </Inset>
+          <View className="flex-row items-center justify-between px-1">
+            <Text className="text-sm text-muted dark:text-muted-dark">
               Captured {image.width}×{image.height}
             </Text>
-            <Pressable accessibilityRole="button" onPress={clear} hitSlop={8}>
-              <Text className="text-sm font-medium text-red-500">Remove</Text>
-            </Pressable>
+            <NeuButton size="sm" title="Remove" onPress={clear} />
           </View>
-        </View>
+        </Card>
       )}
 
       {status && (
-        <Text accessibilityLiveRegion="polite" className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <Text accessibilityLiveRegion="polite" className="px-1 text-sm text-muted dark:text-muted-dark">
           {status}
         </Text>
       )}
 
-      {items.length > 0 && (
-        <View className="mt-3 gap-2">
-          {items.map((item) => (
-            <ExtractedRow key={item.key} item={item} onSave={() => saveItem(item)} />
-          ))}
-        </View>
-      )}
+      {items.map((item) => (
+        <ExtractedRow key={item.key} item={item} onSave={() => saveItem(item)} />
+      ))}
     </View>
   );
 }
 
 function ExtractedRow({ item, onSave }: { item: Item; onSave: () => void }) {
   const missingDosage = !item.dosage;
-  const disabled = item.state !== 'idle' || missingDosage;
+  const saved = item.state === 'saved';
   return (
-    <View className="flex-row items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950">
+    <Card tone={saved ? 'success' : 'default'} className="flex-row items-center gap-3 px-4 py-3">
       <View className="flex-1">
-        <Text className="text-base font-semibold text-gray-900 dark:text-white">{item.medication}</Text>
-        <Text className="text-sm text-gray-600 dark:text-gray-400">
-          {missingDosage ? 'Dosage not readable — add it with the form below.' : item.dosage}
+        <Text className="text-base font-semibold text-ink dark:text-ink-dark">{item.medication}</Text>
+        <Text className="text-sm text-muted dark:text-muted-dark">
+          {missingDosage ? 'Dosage not readable — add it by hand below.' : item.dosage}
         </Text>
-        {item.error && <Text className="mt-1 text-sm text-red-500">{item.error}</Text>}
+        {item.error && <Text className="mt-1 text-sm text-danger dark:text-danger-dark">{item.error}</Text>}
       </View>
-      <Pressable
-        accessibilityRole="button"
+      <NeuButton
+        size="sm"
+        title={saved ? 'Saved ✓' : 'Save'}
+        variant={saved ? 'raised' : 'primary'}
         accessibilityLabel={`Save ${item.medication}`}
-        accessibilityState={{ disabled, busy: item.state === 'saving' }}
-        disabled={disabled}
+        loading={item.state === 'saving'}
+        disabled={item.state !== 'idle' || missingDosage}
         onPress={onSave}
-        className={`min-w-20 items-center rounded-lg px-4 py-2 active:opacity-80 ${
-          item.state === 'saved' ? 'bg-gray-200 dark:bg-gray-800' : 'bg-blue-500'
-        } ${missingDosage ? 'opacity-50' : ''}`}>
-        {item.state === 'saving' ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text
-            className={`text-sm font-semibold ${item.state === 'saved' ? 'text-gray-600 dark:text-gray-300' : 'text-white'}`}>
-            {item.state === 'saved' ? 'Saved ✓' : 'Save'}
-          </Text>
-        )}
-      </Pressable>
-    </View>
+      />
+    </Card>
   );
 }
 

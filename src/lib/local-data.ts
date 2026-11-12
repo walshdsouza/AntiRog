@@ -3,6 +3,7 @@ import { Q, type Database } from '@nozbe/watermelondb';
 import { cancelAllReminders } from '@/lib/reminders';
 import { supabase } from '@/lib/supabase';
 import { syncData } from '@/lib/sync';
+import { deleteAllDocumentFiles } from '@/lib/visits';
 
 /** Id of the account whose data is in the local database. Stored in WatermelonDB, so a reset clears it too. */
 const OWNER_KEY = 'owner_user_id';
@@ -53,6 +54,8 @@ export function clearLocalData(database: Database) {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
+    // Visit documents are medical files; they must not outlive the account's data on this phone.
+    deleteAllDocumentFiles();
   });
 }
 
@@ -80,6 +83,7 @@ export function claimLocalData(database: Database, userId: string) {
       await database.write(async () => {
         await database.unsafeResetDatabase();
       });
+      deleteAllDocumentFiles();
     }
     await database.localStorage.set(OWNER_KEY, userId);
   });

@@ -65,5 +65,39 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: 'prescriptions',
+          columns: [{ name: 'visit_id', type: 'string', isOptional: true, isIndexed: true }],
+        }),
+        createTable({
+          name: 'visits',
+          columns: [
+            { name: 'user_id', type: 'string' },
+            { name: 'visited_at', type: 'number', isIndexed: true },
+            { name: 'facility', type: 'string' },
+            { name: 'doctor', type: 'string' },
+            { name: 'reason', type: 'string' },
+            { name: 'notes', type: 'string' },
+            { name: 'created_at', type: 'number' },
+          ],
+        }),
+        createTable({
+          name: 'visit_documents',
+          columns: [
+            { name: 'visit_id', type: 'string', isIndexed: true },
+            { name: 'user_id', type: 'string' },
+            { name: 'kind', type: 'string' },
+            { name: 'name', type: 'string' },
+            { name: 'mime_type', type: 'string' },
+            { name: 'size', type: 'number' },
+            { name: 'extension', type: 'string' },
+            { name: 'uploaded_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 })

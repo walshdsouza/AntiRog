@@ -1,9 +1,8 @@
+import { Link } from 'expo-router';
 import { Text, View } from 'react-native';
 
+import { Card, SectionTitle } from '@/components/neu';
 import { getDrugProfile } from '@/lib/drug-profiles';
-
-const cardClass =
-  'rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-900';
 
 /**
  * Drug profile for one prescription. Shows a placeholder until the medication has been matched to
@@ -14,7 +13,7 @@ export function DrugProfileCard({ standardName, isHighRisk }: { standardName: st
 
   return (
     <View className="gap-3">
-      <Text className="text-lg font-semibold text-gray-900 dark:text-white">Drug profile</Text>
+      <SectionTitle>Drug profile</SectionTitle>
       {isHighRisk && <HighRiskBanner />}
       {name ? <MatchedProfile name={name} /> : <UnmatchedProfile />}
     </View>
@@ -23,15 +22,16 @@ export function DrugProfileCard({ standardName, isHighRisk }: { standardName: st
 
 function HighRiskBanner() {
   return (
-    <View
-      accessibilityRole="alert"
-      className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950">
-      <Text className="text-base font-semibold text-red-700 dark:text-red-300">High-risk medication</Text>
-      <Text className="mt-1 text-sm text-red-700 dark:text-red-300">
-        This medication has known dangerous interactions. Check the Interactions tab, and talk to your
-        doctor or pharmacist before changing how you take it.
+    <Card tone="danger" accessibilityRole="alert">
+      <Text className="text-base font-semibold text-danger dark:text-danger-dark">High-risk medication</Text>
+      <Text className="mt-1 text-sm text-ink dark:text-ink-dark">
+        This medication has known dangerous interactions. Talk to your doctor or pharmacist before changing
+        how you take it.
       </Text>
-    </View>
+      <Link href={{ pathname: '/', params: { view: 'interactions' } }} className="mt-2 text-sm font-semibold text-danger dark:text-danger-dark">
+        Check interactions ›
+      </Link>
+    </Card>
   );
 }
 
@@ -39,43 +39,43 @@ function MatchedProfile({ name }: { name: string }) {
   const profile = getDrugProfile(name);
 
   return (
-    <View className={cardClass}>
-      <Text className="text-sm text-gray-500 dark:text-gray-400">Standard name</Text>
-      <Text selectable className="text-base font-semibold capitalize text-gray-900 dark:text-white">
+    <Card>
+      <Text className="text-sm text-muted dark:text-muted-dark">Standard name</Text>
+      <Text selectable className="text-base font-semibold capitalize text-ink dark:text-ink-dark">
         {name}
       </Text>
 
-      <Text className="mt-4 text-sm text-gray-500 dark:text-gray-400">Common side effects</Text>
+      <Text className="mt-4 text-sm text-muted dark:text-muted-dark">Common side effects</Text>
       {profile && profile.sideEffects.length > 0 ? (
         <>
           <View className="mt-1 gap-1">
             {profile.sideEffects.map((effect) => (
-              <Text key={effect} className="text-base text-gray-900 dark:text-white">
+              <Text key={effect} className="text-base text-ink dark:text-ink-dark">
                 • {effect}
               </Text>
             ))}
           </View>
-          <Text className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          <Text className="mt-3 text-xs text-muted dark:text-muted-dark">
             Not a complete list. Ask your doctor or pharmacist about any side effect that worries you.
           </Text>
         </>
       ) : (
-        <Text className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <Text className="mt-1 text-sm text-muted dark:text-muted-dark">
           No side-effect information for this medication yet.
         </Text>
       )}
-    </View>
+    </Card>
   );
 }
 
 function UnmatchedProfile() {
   return (
-    <View className={cardClass}>
-      <Text className="text-base font-semibold text-gray-900 dark:text-white">Not matched yet</Text>
-      <Text className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+    <Card>
+      <Text className="text-base font-semibold text-ink dark:text-ink-dark">Not matched yet</Text>
+      <Text className="mt-1 text-sm text-muted dark:text-muted-dark">
         Once AntiRog matches this medication to its drug library, its standard name and common side
         effects will appear here.
       </Text>
-    </View>
+    </Card>
   );
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Share, Text, View } from 'react-native';
+import { Alert, Pressable, Share, Text, View } from 'react-native';
+
+import { Card, NeuButton, Note, SectionTitle, Spinner } from '@/components/neu';
 
 import { useNow } from '@/hooks/use-todays-doses';
 import { usePatientGuardians } from '@/hooks/use-patient-guardians';
@@ -46,33 +48,29 @@ export function GuardianSharing() {
 
   return (
     <View className="gap-3">
-      <View>
-        <Text className="text-lg font-semibold text-gray-900 dark:text-white">Guardians</Text>
-        <Text className="text-sm text-gray-500 dark:text-gray-400">
-          A guardian can see your medications and whether you&apos;ve logged today&apos;s doses. They can&apos;t
-          change anything.
-        </Text>
-      </View>
+      <SectionTitle>Guardians</SectionTitle>
+      <Note>
+        A guardian can see your medications and whether you&apos;ve logged today&apos;s doses. They can&apos;t
+        change anything, and they can&apos;t see your visits.
+      </Note>
 
-      {guardians === undefined && !error && <ActivityIndicator className="py-2" />}
+      {guardians === undefined && !error && <Spinner className="py-2" />}
 
       {error && (
         <Pressable accessibilityRole="button" onPress={reload} className="active:opacity-70">
-          <Text className="text-sm text-red-600 dark:text-red-400">
+          <Text className="text-sm text-danger dark:text-danger-dark">
             {friendlyError(error)} Tap to retry.
           </Text>
         </Pressable>
       )}
 
       {guardians?.map((link) => (
-        <View
-          key={link.id}
-          className="flex-row items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+        <Card key={link.id} className="flex-row items-center gap-3 px-4 py-3">
           <View className="flex-1">
-            <Text selectable className="text-base font-semibold text-gray-900 dark:text-white">
+            <Text selectable className="text-base font-semibold text-ink dark:text-ink-dark">
               {guardianLabel(link)}
             </Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400">
+            <Text className="text-sm text-muted dark:text-muted-dark">
               Linked {new Date(link.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}
             </Text>
           </View>
@@ -83,9 +81,9 @@ export function GuardianSharing() {
             onPress={() => confirmRemove(link)}
             hitSlop={8}
             className="active:opacity-60">
-            <Text className="text-sm font-semibold text-red-500">Remove</Text>
+            <Text className="text-sm font-semibold text-danger dark:text-danger-dark">Remove</Text>
           </Pressable>
-        </View>
+        </Card>
       ))}
 
       {liveInvite ? (
@@ -97,18 +95,11 @@ export function GuardianSharing() {
         />
       ) : (
         guardians !== undefined && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ busy, disabled: busy }}
-            disabled={busy}
+          <NeuButton
+            title="Invite a Guardian"
+            loading={busy}
             onPress={() => void run(createInvite, 'Could not create a code')}
-            className={`items-center rounded-xl border border-blue-500 py-3.5 active:opacity-80 ${busy ? 'opacity-60' : ''}`}>
-            {busy ? (
-              <ActivityIndicator color="#3b82f6" />
-            ) : (
-              <Text className="text-base font-semibold text-blue-500">Invite a Guardian</Text>
-            )}
-          </Pressable>
+          />
         )
       )}
     </View>
@@ -131,43 +122,31 @@ function InviteCard({
   function share() {
     void Share.share({
       message:
-        `I'd like you to be my guardian on AntiRog. Open the Guardian tab, tap Add Patient and enter ` +
+        `I'd like you to be my guardian on AntiRog. Open Profile › People you look after, tap Add and enter ` +
         `this code: ${code}\n\nIt works once and expires ${formatExpiry(invite.expires_at)}.`,
     });
   }
 
   return (
-    <View className="items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-5 dark:border-blue-900 dark:bg-blue-950">
-      <Text className="text-sm text-gray-600 dark:text-gray-300">Ask your guardian to enter this code</Text>
+    <Card tone="accent" className="items-center gap-3 px-4 py-5">
+      <Text className="text-sm text-muted dark:text-muted-dark">Ask your guardian to enter this code</Text>
       <Text
         selectable
         accessibilityLabel={`Invite code ${invite.code.split('').join(' ')}`}
-        className="font-mono text-4xl font-bold tracking-widest text-gray-900 dark:text-white">
+        className="font-mono text-4xl font-bold tracking-widest text-ink dark:text-ink-dark">
         {code}
       </Text>
-      <Text className="text-sm text-gray-500 dark:text-gray-400">
+      <Text className="text-sm text-muted dark:text-muted-dark">
         Works once · expires {formatExpiry(invite.expires_at)}
       </Text>
 
       <View className="mt-1 w-full flex-row gap-3">
-        <Pressable
-          accessibilityRole="button"
-          disabled={busy}
-          onPress={share}
-          className="flex-1 items-center rounded-lg bg-blue-500 py-2.5 active:opacity-80">
-          <Text className="text-sm font-semibold text-white">Share Code</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          disabled={busy}
-          onPress={onNewCode}
-          className="flex-1 items-center rounded-lg border border-blue-500 py-2.5 active:opacity-80">
-          <Text className="text-sm font-semibold text-blue-500">New Code</Text>
-        </Pressable>
+        <NeuButton className="flex-1" size="sm" variant="primary" title="Share Code" disabled={busy} onPress={share} />
+        <NeuButton className="flex-1" size="sm" title="New Code" disabled={busy} onPress={onNewCode} />
       </View>
       <Pressable accessibilityRole="button" disabled={busy} onPress={onCancel} hitSlop={8} className="active:opacity-60">
-        <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400">Cancel Invite</Text>
+        <Text className="text-sm font-semibold text-muted dark:text-muted-dark">Cancel Invite</Text>
       </Pressable>
-    </View>
+    </Card>
   );
 }

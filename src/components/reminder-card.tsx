@@ -1,8 +1,9 @@
-import { Host, Switch } from '@expo/ui';
 import TimePicker from '@expo/ui/community/datetime-picker';
 import { useDatabase } from '@nozbe/watermelondb/react';
 import { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Text, View } from 'react-native';
+
+import { Card, NeuButton, NeuSwitch, SectionTitle } from '@/components/neu';
 
 import type { PrescriptionRecord } from '@/lib/prescriptions';
 import {
@@ -60,23 +61,26 @@ export function ReminderCard({ record, enabled, minutes }: Props) {
 
   return (
     <View className="gap-3">
-      <Text className="text-lg font-semibold text-gray-900 dark:text-white">Reminder</Text>
-      <View className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-900">
+      <SectionTitle>Reminder</SectionTitle>
+      <Card>
         <View className="flex-row items-center gap-3">
           <View className="flex-1">
-            <Text className="text-base font-semibold text-gray-900 dark:text-white">Daily reminder</Text>
-            <Text className="text-sm text-gray-600 dark:text-gray-400">
+            <Text className="text-base font-semibold text-ink dark:text-ink-dark">Daily reminder</Text>
+            <Text className="text-sm text-muted dark:text-muted-dark">
               {enabled ? `Every day at ${formatReminderTime(time)}` : 'Off'}
             </Text>
           </View>
-          <Host matchContents>
-            <Switch value={enabled} onValueChange={toggle} disabled={busy} testID="reminder-switch" />
-          </Host>
+          <NeuSwitch
+            value={enabled}
+            onValueChange={(next) => void toggle(next)}
+            disabled={busy}
+            accessibilityLabel="Daily reminder"
+          />
         </View>
 
         {enabled && Platform.OS === 'ios' && (
           <View className="mt-3 flex-row items-center justify-between">
-            <Text className="text-base text-gray-900 dark:text-white">Time</Text>
+            <Text className="text-base text-ink dark:text-ink-dark">Time</Text>
             <TimePicker
               mode="time"
               display="compact"
@@ -88,12 +92,7 @@ export function ReminderCard({ record, enabled, minutes }: Props) {
 
         {enabled && Platform.OS === 'android' && (
           <>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setPickerOpen(true)}
-              className="mt-3 items-center rounded-lg border border-blue-500 py-2.5 active:opacity-80">
-              <Text className="text-sm font-semibold text-blue-500">Change time</Text>
-            </Pressable>
+            <NeuButton className="mt-4" size="sm" title="Change time" onPress={() => setPickerOpen(true)} />
             {pickerOpen && (
               <TimePicker
                 mode="time"
@@ -104,7 +103,7 @@ export function ReminderCard({ record, enabled, minutes }: Props) {
             )}
           </>
         )}
-      </View>
+      </Card>
     </View>
   );
 }

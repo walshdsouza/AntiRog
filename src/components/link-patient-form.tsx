@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
+
+import { NeuButton, NeuInput } from '@/components/neu';
 
 import { requestGuardianAlertPermission, useGuardian } from '@/hooks/use-guardian-context';
 import { acceptGuardianInvite, friendlyError, patientLabel, type GuardianLink } from '@/lib/guardian';
@@ -43,7 +45,7 @@ export function LinkPatientForm({ onLinked }: { onLinked?: (link: GuardianLink) 
 
   return (
     <View className="gap-3">
-      <TextInput
+      <NeuInput
         value={display(code)}
         onChangeText={(text) => {
           setCode(normalize(text));
@@ -51,7 +53,6 @@ export function LinkPatientForm({ onLinked }: { onLinked?: (link: GuardianLink) 
         }}
         onSubmitEditing={submit}
         placeholder="ABCD-EFGH"
-        placeholderTextColor="#9ca3af"
         autoCapitalize="characters"
         autoCorrect={false}
         autoComplete="off"
@@ -60,22 +61,15 @@ export function LinkPatientForm({ onLinked }: { onLinked?: (link: GuardianLink) 
         maxLength={CODE_LENGTH + 1}
         accessibilityLabel="Invite code"
         accessibilityHint="The 8-character code from the person you want to look after"
-        className="rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-center font-mono text-2xl tracking-widest text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+        className="text-center font-mono text-2xl tracking-widest"
       />
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ busy, disabled: !complete || busy }}
-        disabled={!complete || busy}
-        onPress={submit}
-        className={`items-center rounded-xl bg-blue-500 py-3.5 active:opacity-80 ${!complete || busy ? 'opacity-50' : ''}`}>
-        {busy ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-semibold text-white">Link</Text>}
-      </Pressable>
+      <NeuButton title="Link" variant="primary" loading={busy} disabled={!complete} onPress={submit} />
 
       <Text
         accessibilityLiveRegion="polite"
         className={`min-h-5 text-center text-sm ${
-          message?.error ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'
+          message?.error ? 'text-danger dark:text-danger-dark' : 'text-success dark:text-success-dark'
         }`}>
         {message?.text ?? ' '}
       </Text>

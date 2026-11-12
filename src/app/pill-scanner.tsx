@@ -7,7 +7,7 @@ export default function PillScannerScreen() {
   return (
     <PillScanner
       onClose={() => router.back()}
-      // Close the scanner and show the Vault, where the logged dose now appears as taken.
+      // Close the scanner and show Medications, where the logged dose now appears as taken.
       onDoseLogged={() => router.dismissTo('/')}
     />
   );

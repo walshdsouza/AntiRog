@@ -7,20 +7,23 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+// Derived from the palette in src/theme/neu.ts so the native tab bar sits on the sand / charcoal canvas.
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#232528',
+    background: '#E9E0CE',
+    backgroundElement: '#D6E0F7',
+    backgroundSelected: '#DCD3C2',
+    textSecondary: '#55524B',
+    tint: '#0047E0',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#EEE5D3',
+    background: '#1C1E21',
+    backgroundElement: '#1B2A44',
+    backgroundSelected: '#2D2D2B',
+    textSecondary: '#B8B1A4',
+    tint: '#4C9DFF',
   },
 } as const;
 

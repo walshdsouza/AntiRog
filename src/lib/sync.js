@@ -17,6 +17,7 @@ import { database } from '../../database'
  *     is_high_risk boolean not null default false, -- schema v3
  *     reminder_enabled boolean not null default false, -- schema v5
  *     reminder_minutes integer,                     -- schema v5, minutes after local midnight
+ *     visit_id text,                                -- schema v7, see 20261112000000_visits.sql
  *     server_created_at bigint not null default 0, -- ms, set by trigger
  *     last_modified_at bigint not null default 0,  -- ms, set by trigger
  *     deleted_at bigint                            -- ms, soft delete
@@ -39,7 +40,7 @@ import { database } from '../../database'
  *   alter table public.prescriptions enable row level security;
  *
  * Row-level security policies (owner-only, plus read access for linked guardians) live in
- * supabase/migrations/.
+ * supabase/migrations/, along with the visits and visit_documents tables.
  */
 
 const PAGE_SIZE = 1000
@@ -78,6 +79,7 @@ const TABLES = {
       is_high_risk: Boolean(row.is_high_risk),
       reminder_enabled: Boolean(row.reminder_enabled),
       reminder_minutes: row.reminder_minutes == null ? null : Number(row.reminder_minutes),
+      visit_id: row.visit_id ?? null,
     }),
   },
   // public.dose_events, see supabase/migrations/20261108000000_guardian_sync.sql.
@@ -90,6 +92,35 @@ const TABLES = {
       scheduled_at: Number(row.scheduled_at),
       status: row.status,
       recorded_at: Number(row.recorded_at),
+    }),
+  },
+  // public.visits and public.visit_documents, see supabase/migrations/20261112000000_visits.sql.
+  visits: {
+    softDelete: true,
+    toRaw: (row) => ({
+      id: row.id,
+      user_id: row.user_id ?? '',
+      visited_at: Number(row.visited_at),
+      facility: row.facility ?? '',
+      doctor: row.doctor ?? '',
+      reason: row.reason ?? '',
+      notes: row.notes ?? '',
+      created_at: Number(row.created_at),
+    }),
+  },
+  // Metadata only: the files stay on the phone that attached them.
+  visit_documents: {
+    softDelete: true,
+    toRaw: (row) => ({
+      id: row.id,
+      visit_id: row.visit_id,
+      user_id: row.user_id ?? '',
+      kind: row.kind ?? 'other',
+      name: row.name ?? '',
+      mime_type: row.mime_type ?? '',
+      size: Number(row.size ?? 0),
+      extension: row.extension ?? '',
+      uploaded_at: Number(row.uploaded_at),
     }),
   },
 }

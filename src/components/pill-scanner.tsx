@@ -315,7 +315,7 @@ function hasConflicts(lock: Lock | null) {
 
 function frameBorder(lock: Lock | null) {
   if (hasConflicts(lock)) return 'border-4 border-red-500';
-  if (lock?.check.status === 'checked') return 'border-2 border-emerald-400';
+  if (lock?.check.status === 'checked') return 'border-2 border-success-dark';
   return 'border-2 border-white/80';
 }
 
@@ -371,7 +371,7 @@ function ResultPanel({
                 <Text className="text-sm tabular-nums text-gray-300">{Math.round(p.score * 100)}%</Text>
               </View>
               <View className="h-1.5 overflow-hidden rounded-full bg-white/20">
-                <View className="h-full rounded-full bg-blue-400" style={{ width: `${Math.round(p.score * 100)}%` }} />
+                <View className="h-full rounded-full bg-accent-dark" style={{ width: `${Math.round(p.score * 100)}%` }} />
               </View>
             </View>
           ))}
@@ -421,7 +421,7 @@ function LockPanel({
   if (!lock.drug) {
     body = (
       <Text className="text-base text-amber-300">
-        AntiRog doesn’t recognise this as a medication, so it wasn’t checked against your vault.
+        AntiRog doesn’t recognise this as a medication, so it wasn’t checked against your medications.
       </Text>
     );
   } else if (check.status === 'checking') {
@@ -466,8 +466,8 @@ function LockPanel({
           accessibilityRole="button"
           accessibilityHint="Starts the camera again to identify another pill"
           onPress={onRescan}
-          className="items-center rounded-xl bg-white px-5 py-3 active:opacity-80">
-          <Text className="text-base font-semibold text-black">Scan Again</Text>
+          className="items-center rounded-xl bg-ink-dark px-5 py-3 active:opacity-80">
+          <Text className="text-base font-semibold text-canvas-dark">Scan Again</Text>
         </Pressable>
         <Text className="text-xs text-gray-400">
           A camera match can be wrong, and AntiRog checks a short list of well-known interactions only. Always
@@ -489,7 +489,7 @@ function CheckResult({
 }) {
   const alreadyTaking = check.alreadyTaking.length > 0 && (
     <Text className="text-sm text-gray-200">
-      Already in your vault as {check.alreadyTaking.map((p) => p.medication).join(', ')}. Make sure you aren’t
+      Already in your medications as {check.alreadyTaking.map((p) => p.medication).join(', ')}. Make sure you aren’t
       taking a double dose.
     </Text>
   );
@@ -497,7 +497,7 @@ function CheckResult({
   if (check.conflicts.length === 0) {
     return (
       <View className="gap-2">
-        <Text className="text-base font-semibold text-emerald-300">
+        <Text className="text-base font-semibold text-success-dark">
           {check.checkedCount > 0
             ? `No high-risk combinations with your ${check.checkedCount} checked medication${check.checkedCount === 1 ? '' : 's'}`
             : 'None of your medications could be checked yet'}
@@ -614,17 +614,17 @@ function ScanToLog({
           key={d.prescription.id}
           accessibilityRole="button"
           accessibilityLabel={`Mark ${d.medication} ${d.dosage} as taken`}
-          accessibilityHint="Logs today's dose and returns to your Vault"
+          accessibilityHint="Logs today's dose and returns to Medications"
           accessibilityState={{ disabled: busy, busy }}
           disabled={busy}
           onPress={() => void markTaken(d.prescription)}
-          className={`items-center gap-0.5 rounded-xl bg-emerald-500 px-5 py-4 active:opacity-80 ${busy ? 'opacity-60' : ''}`}>
+          className={`items-center gap-0.5 rounded-xl bg-primary-dark px-5 py-4 active:opacity-80 ${busy ? 'opacity-60' : ''}`}>
           {busy ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#15201A" />
           ) : (
-            <Text className="text-lg font-bold text-white">Mark as Taken</Text>
+            <Text className="text-lg font-bold text-canvas-dark">Mark as Taken</Text>
           )}
-          <Text className="text-sm text-emerald-50">
+          <Text className="text-sm text-canvas-dark">
             {d.medication} {d.dosage} · due {formatTime(d.scheduledAt)}
           </Text>
         </Pressable>
@@ -641,8 +641,8 @@ function Message({ text, action }: { text: string; action?: { label: string; onP
         <Pressable
           accessibilityRole="button"
           onPress={action.onPress}
-          className="rounded-xl bg-blue-500 px-5 py-3 active:opacity-80">
-          <Text className="text-base font-semibold text-white">{action.label}</Text>
+          className="rounded-xl bg-accent-dark px-5 py-3 active:opacity-80">
+          <Text className="text-base font-semibold text-canvas-dark">{action.label}</Text>
         </Pressable>
       )}
     </View>
