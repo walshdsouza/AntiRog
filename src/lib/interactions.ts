@@ -1,4 +1,4 @@
-import { type Database, type Model } from '@nozbe/watermelondb';
+import { Q, type Database, type Model } from '@nozbe/watermelondb';
 
 import { DATA_VERSION, DRUGS, PAIRS, type Severity } from '@/lib/interaction-data';
 import type { PrescriptionRecord } from '@/lib/prescriptions';
@@ -160,4 +160,66 @@ export function buildConflicts(pairs: InteractionPairRecord[], prescriptions: Pr
         SEVERITY_RANK[y.pair.severity] - SEVERITY_RANK[x.pair.severity] ||
         x.pair.drugA.localeCompare(y.pair.drugA),
     );
+}
+
+export type ScanConflict = {
+  pair: InteractionPairRecord;
+  /** The vault drug on the other side of the pair. */
+  otherDrug: string;
+  /** The user's prescriptions of `otherDrug`. */
+  yourMeds: PrescriptionRecord[];
+};
+
+export type ScanCheck =
+  | { status: 'checked'; conflicts: ScanConflict[]; alreadyTaking: PrescriptionRecord[]; checkedCount: number }
+  /** The interaction table hasn't been seeded on this device yet, so nothing could be checked. */
+  | { status: 'unavailable' };
+
+/**
+ * Checks one drug (a standard name, e.g. from the pill scanner) against every prescription in the
+ * local vault, offline. Conflicts are sorted most severe first.
+ */
+export async function checkDrugAgainstVault(database: Database, standardName: string): Promise<ScanCheck> {
+  // Never report "no conflicts" from an empty table: that would be a false all-clear.
+  if ((await database.localStorage.get<string>(SEED_KEY)) !== DATA_VERSION) return { status: 'unavailable' };
+
+  // Deleted prescriptions are excluded by WatermelonDB automatically.
+  const prescriptions = await database.get<PrescriptionRecord>('prescriptions').query().fetch();
+  // Match from the medication text too, in case a record hasn't been matched yet (e.g. just synced in).
+  const nameOf = (p: PrescriptionRecord) => p.standardName || matchDrug(p.medication).standardName;
+  const byName = new Map<string, PrescriptionRecord[]>();
+  for (const p of prescriptions) {
+    const name = nameOf(p);
+    if (name) byName.set(name, [...(byName.get(name) ?? []), p]);
+  }
+
+  const others = [...byName.keys()].filter((name) => name !== standardName);
+  const pairs = others.length
+    ? await database
+        .get<InteractionPairRecord>('interaction_pairs')
+        .query(
+          Q.or(
+            Q.and(Q.where('drug_a', standardName), Q.where('drug_b', Q.oneOf(others))),
+            Q.and(Q.where('drug_b', standardName), Q.where('drug_a', Q.oneOf(others))),
+          ),
+        )
+        .fetch()
+    : [];
+
+  const conflicts = pairs
+    .map((pair) => {
+      const otherDrug = pair.drugA === standardName ? pair.drugB : pair.drugA;
+      return { pair, otherDrug, yourMeds: byName.get(otherDrug) ?? [] };
+    })
+    .sort(
+      (x, y) =>
+        SEVERITY_RANK[y.pair.severity] - SEVERITY_RANK[x.pair.severity] || x.otherDrug.localeCompare(y.otherDrug),
+    );
+
+  return {
+    status: 'checked',
+    conflicts,
+    alreadyTaking: byName.get(standardName) ?? [],
+    checkedCount: [...byName.values()].reduce((n, meds) => n + meds.length, 0),
+  };
 }

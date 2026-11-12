@@ -1,5 +1,8 @@
 import type { Tensor, TensorflowModel } from 'react-native-fast-tflite';
 
+import { matchDrug } from '@/lib/interactions';
+
+import { STANDIN_DRUG_FOR_LABEL } from './standin-drug-map';
 import { STANDIN_LABELS } from './standin-labels';
 
 /*
@@ -41,6 +44,18 @@ export type PillModelConfig = {
   labels: readonly string[];
   /** Results below this probability are not shown as a match. */
   minConfidence: number;
+  /**
+   * The scanner locks onto a result, pauses the camera and checks it against the vault once the same
+   * class scores at least `lockConfidence` on `lockFrames` inferences in a row. Requiring a streak
+   * stops a single lucky frame from triggering a check.
+   */
+  lockConfidence: number;
+  lockFrames: number;
+  /**
+   * Optional label → standard drug name overrides. Labels not listed here are matched as medication
+   * text (brand or generic names), which is what a trained pill model's labels will be.
+   */
+  drugForLabel?: Readonly<Record<string, string>>;
 };
 
 /**
@@ -57,7 +72,31 @@ export const PILL_MODEL: PillModelConfig = {
   output: { dataType: 'uint8', scale: 0.00390625, zeroPoint: 0, activation: 'none' },
   labels: STANDIN_LABELS,
   minConfidence: 0.2,
+  lockConfidence: 0.75,
+  lockFrames: 3,
+  // Placeholder so everyday objects stand in for drugs while testing; see standin-drug-map.ts.
+  drugForLabel: STANDIN_DRUG_FOR_LABEL,
 };
+
+/** The standard drug name a model label stands for, or '' if AntiRog doesn't recognise it. */
+export function drugForLabel(config: PillModelConfig, label: string): string {
+  return config.drugForLabel?.[label] ?? matchDrug(label).standardName;
+}
+
+/**
+ * For each class, the first class index that stands for the same drug; classes with no drug map to
+ * themselves. The scanner adds up the scores of classes in one group, so a drug split across
+ * look-alike classes (e.g. "coffee mug" and "cup", or two pills that look the same) still locks.
+ */
+export function drugGroups(config: PillModelConfig): number[] {
+  const firstByDrug = new Map<string, number>();
+  return config.labels.map((label, index) => {
+    const drug = drugForLabel(config, label);
+    if (!drug) return index;
+    if (!firstByDrug.has(drug)) firstByDrug.set(drug, index);
+    return firstByDrug.get(drug)!;
+  });
+}
 
 /** Bytes one input image takes: width × height × 3 channels × bytes per channel. */
 export function inputByteLength(config: PillModelConfig) {
