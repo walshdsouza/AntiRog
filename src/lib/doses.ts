@@ -47,6 +47,17 @@ export function scheduledTime(dayStart: number, minutes: number) {
   return date.getTime();
 }
 
+/** How long before its reminder time a dose counts as due (e.g. for logging it from the pill scanner). */
+export const DUE_EARLY_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * True when today's dose can be logged as taken now: from DUE_EARLY_MS before its time onwards, as
+ * long as it hasn't been taken yet. A skipped dose is still due, since the patient may take it late.
+ */
+export function isDoseDue(scheduledAt: number, loggedStatus: string | undefined, now: number = Date.now()) {
+  return loggedStatus !== 'taken' && now >= scheduledAt - DUE_EARLY_MS;
+}
+
 /** One id per dose, so the same dose logged on two devices ends up as one record (and one server row). */
 function doseId(prescriptionId: string, scheduledAt: number) {
   return `${prescriptionId}_${scheduledAt}`;

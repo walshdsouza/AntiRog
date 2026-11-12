@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 /** VisionCamera and TFLite are native-only; the web build gets a notice instead. */
-export function PillScanner({ onClose }: { onClose: () => void }) {
+export function PillScanner({ onClose }: { onClose: () => void; onDoseLogged?: () => void }) {
   return (
     <View className="flex-1 items-center justify-center gap-4 bg-white px-6 dark:bg-black">
       <Text className="text-center text-base text-gray-600 dark:text-gray-400">

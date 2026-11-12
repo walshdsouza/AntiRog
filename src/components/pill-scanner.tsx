@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  Alert,
   AppState,
   Linking,
   Pressable,
@@ -17,7 +18,10 @@ import { Camera, useCameraDevice, useCameraPermission, useFrameOutput } from 're
 import { createSynchronizable, scheduleOnRN } from 'react-native-worklets';
 
 import { usePillModel } from '@/hooks/use-pill-model';
+import { useNow, useTodaysDoses } from '@/hooks/use-todays-doses';
+import { isDoseDue, logDose } from '@/lib/doses';
 import { checkDrugAgainstVault, type ScanCheck } from '@/lib/interactions';
+import type { PrescriptionRecord } from '@/lib/prescriptions';
 import { decodeTopK, drugForLabel, drugGroups, inputByteLength, packPixels } from '@/lib/pill-model';
 
 /** Run the model at most this often. The camera delivers ~30 fps; 5 predictions a second is plenty. */
@@ -37,6 +41,10 @@ type Lock = {
   check: { status: 'checking' } | ScanCheck | { status: 'error'; message: string };
 };
 
+function formatTime(ms: number) {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 function titleCase(name: string) {
   return name.replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -55,7 +63,7 @@ function useAppActive() {
  * Once a match is confident and steady, the scanner locks onto it, pauses the camera and checks the
  * drug against the vault with the offline interaction table. Frames are never stored or uploaded.
  */
-export function PillScanner({ onClose }: { onClose: () => void }) {
+export function PillScanner({ onClose, onDoseLogged }: { onClose: () => void; onDoseLogged: () => void }) {
   const database = useDatabase();
   const permission = useCameraPermission();
   const device = useCameraDevice('back');
@@ -283,7 +291,7 @@ export function PillScanner({ onClose }: { onClose: () => void }) {
               <View className={`h-56 w-56 rounded-3xl ${frameBorder(lock)}`} />
             </View>
             {lock ? (
-              <LockPanel lock={lock} isStandIn={isStandIn} onRescan={rescan} />
+              <LockPanel lock={lock} isStandIn={isStandIn} onRescan={rescan} onDoseLogged={onDoseLogged} />
             ) : (
               <ResultPanel
                 loading={pill.state === 'loading'}
@@ -395,7 +403,17 @@ const SEVERITY = {
 } as const;
 
 /** The locked result: what was identified and how it fits with the user's vault. */
-function LockPanel({ lock, isStandIn, onRescan }: { lock: Lock; isStandIn: boolean; onRescan: () => void }) {
+function LockPanel({
+  lock,
+  isStandIn,
+  onRescan,
+  onDoseLogged,
+}: {
+  lock: Lock;
+  isStandIn: boolean;
+  onRescan: () => void;
+  onDoseLogged: () => void;
+}) {
   const { check } = lock;
   const danger = hasConflicts(lock);
 
@@ -422,7 +440,7 @@ function LockPanel({ lock, isStandIn, onRescan }: { lock: Lock; isStandIn: boole
       </Text>
     );
   } else {
-    body = <CheckResult drug={lock.drug} check={check} />;
+    body = <CheckResult drug={lock.drug} check={check} onDoseLogged={onDoseLogged} />;
   }
 
   return (
@@ -460,7 +478,15 @@ function LockPanel({ lock, isStandIn, onRescan }: { lock: Lock; isStandIn: boole
   );
 }
 
-function CheckResult({ drug, check }: { drug: string; check: Extract<ScanCheck, { status: 'checked' }> }) {
+function CheckResult({
+  drug,
+  check,
+  onDoseLogged,
+}: {
+  drug: string;
+  check: Extract<ScanCheck, { status: 'checked' }>;
+  onDoseLogged: () => void;
+}) {
   const alreadyTaking = check.alreadyTaking.length > 0 && (
     <Text className="text-sm text-gray-200">
       Already in your vault as {check.alreadyTaking.map((p) => p.medication).join(', ')}. Make sure you aren’t
@@ -476,7 +502,9 @@ function CheckResult({ drug, check }: { drug: string; check: Extract<ScanCheck, 
             ? `No high-risk combinations with your ${check.checkedCount} checked medication${check.checkedCount === 1 ? '' : 's'}`
             : 'None of your medications could be checked yet'}
         </Text>
-        {alreadyTaking}
+        {check.alreadyTaking.length > 0 && (
+          <ScanToLog prescriptions={check.alreadyTaking} fallback={alreadyTaking} onLogged={onDoseLogged} />
+        )}
       </View>
     );
   }
@@ -514,6 +542,93 @@ function CheckResult({ drug, check }: { drug: string; check: Extract<ScanCheck, 
       })}
 
       {alreadyTaking}
+    </View>
+  );
+}
+
+/**
+ * Scan-to-log: when the scanned drug is in the vault and today's dose is due, offers to log it as
+ * taken. Only shown on the no-conflict result. Warns instead if today's dose was already taken.
+ */
+function ScanToLog({
+  prescriptions,
+  fallback,
+  onLogged,
+}: {
+  prescriptions: PrescriptionRecord[];
+  /** Shown when no dose is due or taken today (e.g. no reminder set, or it's due later). */
+  fallback: React.ReactNode;
+  onLogged: () => void;
+}) {
+  const database = useDatabase();
+  const { doses, dayStart } = useTodaysDoses();
+  const now = useNow();
+  const [busy, setBusy] = useState(false);
+
+  if (!doses) return null;
+  const ids = new Set(prescriptions.map((p) => p.id));
+  const mine = doses.filter((d) => ids.has(d.prescription.id));
+  const due = mine.filter((d) => isDoseDue(d.scheduledAt, d.logged?.status, now));
+  const taken = mine.filter((d) => d.logged?.status === 'taken');
+  const later = mine.filter((d) => !d.logged && !due.includes(d));
+
+  async function markTaken(prescription: PrescriptionRecord) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await logDose(database, { prescription, dayStart, status: 'taken' });
+      onLogged();
+    } catch (e) {
+      Alert.alert('Could not log dose', e instanceof Error ? e.message : 'Something went wrong.');
+      setBusy(false);
+    }
+  }
+
+  if (due.length === 0 && taken.length === 0) {
+    return (
+      <View className="gap-1">
+        {fallback}
+        {later.map((d) => (
+          <Text key={d.prescription.id} className="text-sm text-gray-300">
+            {d.medication} is next due at {formatTime(d.scheduledAt)}.
+          </Text>
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <View className="gap-3">
+      {taken.map((d) => (
+        <View key={d.prescription.id} className="rounded-xl bg-amber-500/20 px-3 py-3">
+          <Text className="text-base font-semibold text-amber-300">
+            Already taken today at {formatTime(d.logged!.recordedAt)}
+          </Text>
+          <Text className="text-sm text-amber-200">
+            {d.medication} {d.dosage}. Don’t take another dose unless your doctor told you to.
+          </Text>
+        </View>
+      ))}
+      {due.map((d) => (
+        <Pressable
+          key={d.prescription.id}
+          accessibilityRole="button"
+          accessibilityLabel={`Mark ${d.medication} ${d.dosage} as taken`}
+          accessibilityHint="Logs today's dose and returns to your Vault"
+          accessibilityState={{ disabled: busy, busy }}
+          disabled={busy}
+          onPress={() => void markTaken(d.prescription)}
+          className={`items-center gap-0.5 rounded-xl bg-emerald-500 px-5 py-4 active:opacity-80 ${busy ? 'opacity-60' : ''}`}>
+          {busy ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-lg font-bold text-white">Mark as Taken</Text>
+          )}
+          <Text className="text-sm text-emerald-50">
+            {d.medication} {d.dosage} · due {formatTime(d.scheduledAt)}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
