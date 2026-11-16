@@ -17,4 +17,5 @@ export default class LabResult extends Model {
   @field('measured_at') measuredAt
   @text('report_name') reportName
   @readonly @date('created_at') createdAt
+  @field('document_id') documentId
 }

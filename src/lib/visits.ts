@@ -11,6 +11,10 @@ import { syncData } from '@/lib/sync';
  * phone: each is copied into app storage at `visit-documents/<document id><extension>`, so the path
  * can be rebuilt from the synced record without storing a device-specific URI. On another phone the
  * record syncs but the file is missing, and the UI says so.
+ *
+ * Lab reports scanned in Reports › Tests are saved the same way, as documents with no visit
+ * (visit_id = ''). Readings saved from a report point at its document (lab_results.document_id), so
+ * deleting the document deletes them too.
  */
 
 export type DocumentKind = 'prescription' | 'lab_report' | 'other';
@@ -34,6 +38,7 @@ export type VisitRecord = Model & {
 };
 
 export type VisitDocumentRecord = Model & {
+  /** '' for a lab report scanned in Reports › Tests, which belongs to no visit. */
   visitId: string;
   userId: string;
   kind: DocumentKind;
@@ -93,17 +98,26 @@ export async function updateVisit(database: Database, visit: VisitRecord, input:
   void syncData();
 }
 
+/** Lab readings that were saved from these documents (see src/lib/lab-results.ts). */
+function readingsFrom(database: Database, documentIds: string[]) {
+  if (!documentIds.length) return Promise.resolve([] as Model[]);
+  return database.get('lab_results').query(Q.where('document_id', Q.oneOf(documentIds))).fetch();
+}
+
 /**
- * Soft-deletes a visit and its documents (so the deletion syncs) and removes the document files from
- * this phone. Prescriptions added from the visit stay in Medications.
+ * Soft-deletes a visit, its documents and the lab readings saved from them (so the deletion syncs)
+ * and removes the document files from this phone. Prescriptions added from the visit stay in
+ * Medications.
  */
 export async function deleteVisit(database: Database, visit: VisitRecord) {
   const documents = await database
     .get<VisitDocumentRecord>('visit_documents')
     .query(Q.where('visit_id', visit.id))
     .fetch();
+  const readings = await readingsFrom(database, documents.map((d) => d.id));
   await database.write(async () => {
     await database.batch([
+      ...readings.map((r) => r.prepareMarkAsDeleted()),
       ...documents.map((d) => d.prepareMarkAsDeleted()),
       visit.prepareMarkAsDeleted(),
     ]);
@@ -163,8 +177,9 @@ function extensionOf(name: string, mimeType: string) {
 const MAX_BYTES = 25 * 1024 * 1024;
 
 /**
- * Copies a picked file into app storage and records it against the visit. `source` is a temporary
- * file from the picker or camera; the copy is what the app keeps.
+ * Copies a picked file into app storage and records it against the visit (or no visit, when
+ * `visitId` is null). `source` is a temporary file from the picker or camera; the copy is what the
+ * app keeps. Returns the new document's id.
  */
 export async function attachDocument(
   database: Database,
@@ -174,8 +189,8 @@ export async function attachDocument(
     name,
     mimeType,
     kind,
-  }: { visitId: string; source: File; name: string; mimeType: string; kind: DocumentKind },
-) {
+  }: { visitId: string | null; source: File; name: string; mimeType: string; kind: DocumentKind },
+): Promise<string> {
   const size = source.size ?? 0;
   if (size > MAX_BYTES) throw new Error('That file is larger than 25 MB. Attach a smaller copy.');
 
@@ -184,7 +199,7 @@ export async function attachDocument(
   const collection = database.get<VisitDocumentRecord>('visit_documents');
   // Pick the id first so the file can be named after it before the record exists.
   const draft = collection.prepareCreate((r) => {
-    r.visitId = visitId;
+    r.visitId = visitId ?? '';
     r.userId = userId;
     r.kind = kind;
     r.name = name || `Document${extension}`;
@@ -206,11 +221,18 @@ export async function attachDocument(
     throw e;
   }
   void syncData();
+  return draft.id;
 }
 
-/** Removes a document: soft-deletes the record (synced) and deletes the file on this phone. */
+/**
+ * Removes a document: soft-deletes the record and the lab readings saved from it (synced), so they
+ * leave the trend charts, and deletes the file on this phone.
+ */
 export async function deleteDocument(database: Database, document: VisitDocumentRecord) {
-  await database.write(() => document.markAsDeleted());
+  const readings = await readingsFrom(database, [document.id]);
+  await database.write(async () => {
+    await database.batch([...readings.map((r) => r.prepareMarkAsDeleted()), document.prepareMarkAsDeleted()]);
+  });
   deleteLocalFile(document);
   void syncData();
 }

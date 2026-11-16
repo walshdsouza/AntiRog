@@ -22,6 +22,7 @@ import { useNow, useTodaysDoses } from '@/hooks/use-todays-doses';
 import { isDoseDue, logDose } from '@/lib/doses';
 import { checkDrugAgainstVault, type ScanCheck } from '@/lib/interactions';
 import type { PrescriptionRecord } from '@/lib/prescriptions';
+import { recordScannedPill } from '@/lib/scanned-pills';
 import { decodeTopK, drugForLabel, drugGroups, inputByteLength, packPixels } from '@/lib/pill-model';
 
 /** Run the model at most this often. The camera delivers ~30 fps; 5 predictions a second is plenty. */
@@ -109,6 +110,8 @@ export function PillScanner({ onClose, onDoseLogged }: { onClose: () => void; on
     const drug = drugForLabel(ready.config, label);
     setLock({ label, score, drug, check: { status: 'checking' } });
     if (__DEV__) console.log(`[pill-scanner] Locked on "${label}" (${Math.round(score * 100)}%) -> drug "${drug}"`);
+    // Shown as "Previously Identified Pills" on the Scan tab.
+    void recordScannedPill(database, { name: drug ? titleCase(drug) : label, label, drug, confidence: score });
     if (!drug) return;
 
     checkDrugAgainstVault(database, drug)

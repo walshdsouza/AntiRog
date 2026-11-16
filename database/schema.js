@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 8,
+  version: 9,
   tables: [
     tableSchema({
       name: 'users',
@@ -94,6 +94,27 @@ export const schema = appSchema({
         // File name or label of the report the value was read from.
         { name: 'report_name', type: 'string' },
         { name: 'created_at', type: 'number' },
+        // The visit_documents record (the saved report file) these values came from (schema v9).
+        // Deleting that report deletes its readings. Null for readings saved before v9.
+        { name: 'document_id', type: 'string', isOptional: true, isIndexed: true },
+      ]
+    }),
+    // Pills identified with the pill scanner (schema v9). Synced to Supabase (public.scanned_pills).
+    // Only the result is stored; camera frames never are.
+    tableSchema({
+      name: 'scanned_pills',
+      columns: [
+        { name: 'user_id', type: 'string' },
+        // Display name: the medication's name, or the model's label when it isn't a known medication.
+        { name: 'name', type: 'string' },
+        // The model's raw class label.
+        { name: 'label', type: 'string' },
+        // Standard drug name, '' when the label isn't a medication AntiRog knows.
+        { name: 'drug', type: 'string' },
+        // 0..1, the model's score when the scanner locked on.
+        { name: 'confidence', type: 'number' },
+        // ms, when the pill was identified.
+        { name: 'scanned_at', type: 'number', isIndexed: true },
       ]
     }),
     // Curated reference data, seeded on the device from src/lib/interaction-data.ts. Never synced.

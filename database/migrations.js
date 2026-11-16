@@ -118,5 +118,25 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 9,
+      steps: [
+        addColumns({
+          table: 'lab_results',
+          columns: [{ name: 'document_id', type: 'string', isOptional: true, isIndexed: true }],
+        }),
+        createTable({
+          name: 'scanned_pills',
+          columns: [
+            { name: 'user_id', type: 'string' },
+            { name: 'name', type: 'string' },
+            { name: 'label', type: 'string' },
+            { name: 'drug', type: 'string' },
+            { name: 'confidence', type: 'number' },
+            { name: 'scanned_at', type: 'number', isIndexed: true },
+          ],
+        }),
+      ],
+    },
   ],
 })

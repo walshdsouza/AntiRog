@@ -40,7 +40,7 @@ import { database } from '../../database'
  *   alter table public.prescriptions enable row level security;
  *
  * Row-level security policies (owner-only, plus read access for linked guardians) live in
- * supabase/migrations/, along with the visits, visit_documents and lab_results tables.
+ * supabase/migrations/, along with the visits, visit_documents, lab_results and scanned_pills tables.
  */
 
 const PAGE_SIZE = 1000
@@ -137,6 +137,21 @@ const TABLES = {
       measured_at: Number(row.measured_at),
       report_name: row.report_name ?? '',
       created_at: Number(row.created_at),
+      // schema v9, see supabase/migrations/20261117000000_report_links_and_scanned_pills.sql.
+      document_id: row.document_id ?? null,
+    }),
+  },
+  // public.scanned_pills, see supabase/migrations/20261117000000_report_links_and_scanned_pills.sql.
+  scanned_pills: {
+    softDelete: true,
+    toRaw: (row) => ({
+      id: row.id,
+      user_id: row.user_id ?? '',
+      name: row.name ?? '',
+      label: row.label ?? '',
+      drug: row.drug ?? '',
+      confidence: Number(row.confidence ?? 0),
+      scanned_at: Number(row.scanned_at),
     }),
   },
 }

@@ -7,16 +7,18 @@ import { visitTitle, type VisitDocumentRecord, type VisitRecord } from '@/lib/vi
 // Observables emit the same model instances on change; snapshot the fields so React re-renders.
 export type LabDocument = Pick<VisitDocumentRecord, 'id' | 'name' | 'mimeType' | 'extension' | 'uploadedAt'> & {
   record: VisitDocumentRecord;
-  visitId: string;
-  visitTitle: string;
+  /** null for a report scanned in Reports › Tests rather than attached to a visit. */
+  visitId: string | null;
+  visitTitle: string | null;
   visitedAt: number | null;
 };
 
 /**
- * The most recent lab reports attached to visits, newest first, with their visit's name and date.
- * Live: updates on local and synced changes. `undefined` while loading.
+ * Every lab report, newest first: those attached to visits (with the visit's name and date) and
+ * those scanned in Reports › Tests. Live: updates on local and synced changes. `undefined` while
+ * loading.
  */
-export function useLabDocuments(limit = 10) {
+export function useLabDocuments() {
   const database = useDatabase();
   const [documents, setDocuments] = useState<LabDocument[] | undefined>(undefined);
 
@@ -28,7 +30,8 @@ export function useLabDocuments(limit = 10) {
       if (!docs || !visits) return;
       setDocuments(
         docs.map((record) => {
-          const visit = visits!.get(record.visitId);
+          const visitId = record.visitId || null;
+          const visit = visitId ? visits!.get(visitId) : undefined;
           return {
             id: record.id,
             name: record.name,
@@ -36,8 +39,8 @@ export function useLabDocuments(limit = 10) {
             extension: record.extension,
             uploadedAt: record.uploadedAt,
             record,
-            visitId: record.visitId,
-            visitTitle: visit ? visitTitle(visit) : 'Visit',
+            visitId,
+            visitTitle: visit ? visitTitle(visit) : visitId ? 'Visit' : null,
             visitedAt: visit?.visitedAt ?? null,
           };
         }),
@@ -46,7 +49,7 @@ export function useLabDocuments(limit = 10) {
 
     const docSubscription = database
       .get<VisitDocumentRecord>('visit_documents')
-      .query(Q.where('kind', 'lab_report'), Q.sortBy('uploaded_at', Q.desc), Q.take(limit))
+      .query(Q.where('kind', 'lab_report'), Q.sortBy('uploaded_at', Q.desc))
       .observeWithColumns(['name', 'uploaded_at'])
       .subscribe((records) => {
         docs = records;
@@ -67,7 +70,7 @@ export function useLabDocuments(limit = 10) {
       docSubscription.unsubscribe();
       visitSubscription.unsubscribe();
     };
-  }, [database, limit]);
+  }, [database]);
 
   return documents;
 }

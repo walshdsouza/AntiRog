@@ -4,7 +4,7 @@ import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Platform, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { BiomarkerTrendChart } from '@/components/biomarker-trend-chart';
 import { Badge, Card, Chevron, EmptyState, NeuButton, Note, PressableCard, SectionTitle, Spinner, type Tone } from '@/components/neu';
@@ -14,16 +14,24 @@ import { startOfDay } from '@/lib/doses';
 import { saveLabResults } from '@/lib/lab-results';
 import { isOcrAvailable, OcrError, recognizeText } from '@/lib/ocr';
 import { formatBiomarker, parseLabReport, type Biomarker, type BiomarkerFlag } from '@/lib/report-parser';
-import { documentFile, formatVisitDate, hasLocalFile, previewDocument } from '@/lib/visits';
+import {
+  attachDocument,
+  deleteDocument,
+  documentFile,
+  formatVisitDate,
+  hasLocalFile,
+  previewDocument,
+} from '@/lib/visits';
 
 /*
  * Reports › Tests: read lab values from a photo of a report with on-device OCR, show what was found,
- * let the patient date and save them, chart saved readings over time, and list the lab reports
- * already attached to visits.
+ * let the patient date and save them, chart saved readings over time, and list every lab report
+ * (scanned here or attached to a visit).
  *
  * Zero-trust: the image is read on the phone (src/lib/ocr.ts) and parsed locally
- * (src/lib/report-parser.ts). Nothing is uploaded. Only the values the patient saves are stored
- * (src/lib/lab-results.ts) and synced; the report image itself never leaves the phone.
+ * (src/lib/report-parser.ts). Nothing is uploaded. Saving keeps the report file on this phone as a
+ * document with no visit (src/lib/visits.ts) and stores the values (src/lib/lab-results.ts); only
+ * their records sync, the report image itself never leaves the phone.
  */
 
 type Scan = {
@@ -33,6 +41,11 @@ type Scan = {
   biomarkers: Biomarker[];
   /** Suggested report date (ms): the visit's date for an attached report, otherwise today. */
   date: number;
+  /** The picked file, saved as a document when the patient saves the scan. */
+  uri: string;
+  mimeType: string | null;
+  /** The saved document this scan belongs to: an existing report, or set once this scan is saved. */
+  documentId: string | null;
 };
 
 const FLAG_BADGE: Record<BiomarkerFlag, { label: string; tone: Tone } | null> = {
@@ -41,7 +54,14 @@ const FLAG_BADGE: Record<BiomarkerFlag, { label: string; tone: Tone } | null> = 
   normal: null,
 };
 
-type Picked = { uri: string; name: string; mimeType: string | null; date?: number | null };
+type Picked = {
+  uri: string;
+  name: string;
+  mimeType: string | null;
+  date?: number | null;
+  /** Set when re-reading a report that is already saved. */
+  documentId?: string;
+};
 
 let scanCount = 0;
 
@@ -51,6 +71,9 @@ function toScan(picked: Picked, blocks: string[]): Scan {
     name: picked.name,
     biomarkers: parseLabReport(blocks),
     date: startOfDay(picked.date ?? Date.now()),
+    uri: picked.uri,
+    mimeType: picked.mimeType,
+    documentId: picked.documentId ?? null,
   };
 }
 
@@ -81,6 +104,7 @@ async function chooseFile(): Promise<Picked | null> {
 
 export function LabTestsReport() {
   const router = useRouter();
+  const database = useDatabase();
   const documents = useLabDocuments();
   const [reading, setReading] = useState(false);
   const [scan, setScan] = useState<Scan | null>(null);
@@ -121,7 +145,8 @@ export function LabTestsReport() {
             uri: documentFile(doc).uri,
             name: doc.name,
             mimeType: doc.mimeType,
-            date: doc.visitedAt,
+            date: doc.visitedAt ?? doc.uploadedAt,
+            documentId: doc.id,
           })),
       });
     }
@@ -134,9 +159,40 @@ export function LabTestsReport() {
           ),
       });
     }
-    actions.push({ text: 'Go to Visit', onPress: () => router.push({ pathname: '/visits/[id]', params: { id: doc.visitId } }) });
+    const { visitId } = doc;
+    if (visitId) {
+      actions.push({ text: 'Go to Visit', onPress: () => router.push({ pathname: '/visits/[id]', params: { id: visitId } }) });
+    }
     actions.push({ text: 'Cancel', style: 'cancel' });
     Alert.alert(doc.name, local ? undefined : 'This document is stored on another device.', actions);
+  }
+
+  function confirmDelete(doc: LabDocument) {
+    const fromVisit = doc.visitTitle ? ` It will also be removed from ${doc.visitTitle}.` : '';
+    Alert.alert(
+      'Delete lab report?',
+      `Are you sure? “${doc.name}” and the test values saved from it will be deleted from your trends on all your devices.${fromVisit}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDocument(database, doc.record);
+              // A result card still showing this report would otherwise save values against it.
+              setScan((current) => (current?.documentId === doc.id ? null : current));
+            } catch (e) {
+              Alert.alert('Could not delete report', e instanceof Error ? e.message : 'Something went wrong.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function documentSaved(scanId: number, documentId: string) {
+    setScan((current) => (current?.id === scanId ? { ...current, documentId } : current));
   }
 
   return (
@@ -165,12 +221,12 @@ export function LabTestsReport() {
         ) : null}
       </Card>
 
-      {scan ? <ScanResult key={scan.id} scan={scan} /> : null}
+      {scan ? <ScanResult key={scan.id} scan={scan} onDocumentSaved={documentSaved} /> : null}
 
       <SectionTitle>Trends</SectionTitle>
       <BiomarkerTrendChart />
 
-      <SectionTitle>Lab reports from visits</SectionTitle>
+      <SectionTitle>Lab Reports</SectionTitle>
       {documents === undefined ? (
         <View className="items-center py-8">
           <Spinner />
@@ -180,7 +236,7 @@ export function LabTestsReport() {
           {documents.map((doc) => (
             <PressableCard
               key={doc.id}
-              accessibilityLabel={`${doc.name}, from ${doc.visitTitle}`}
+              accessibilityLabel={`${doc.name}, ${doc.visitTitle ? `from ${doc.visitTitle}` : 'scanned in Reports'}`}
               accessibilityHint="Shows options for this lab report"
               onPress={() => openDocument(doc)}>
               <View className="flex-row items-center gap-3">
@@ -189,11 +245,21 @@ export function LabTestsReport() {
                     {doc.name}
                   </Text>
                   <Text numberOfLines={1} className="text-sm text-muted dark:text-muted-dark">
-                    {[doc.visitTitle, doc.visitedAt != null ? formatVisitDate(doc.visitedAt) : null]
-                      .filter(Boolean)
-                      .join(' · ')}
+                    {doc.visitTitle
+                      ? [doc.visitTitle, doc.visitedAt != null ? formatVisitDate(doc.visitedAt) : null]
+                          .filter(Boolean)
+                          .join(' · ')
+                      : `Scanned · ${formatVisitDate(doc.uploadedAt)}`}
                   </Text>
                 </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${doc.name}`}
+                  accessibilityHint="Deletes this report and the test values saved from it"
+                  hitSlop={10}
+                  onPress={() => confirmDelete(doc)}>
+                  <Text className="text-sm font-semibold text-danger dark:text-danger-dark">Delete</Text>
+                </Pressable>
                 <Chevron />
               </View>
             </PressableCard>
@@ -203,7 +269,7 @@ export function LabTestsReport() {
         <EmptyState
           glyph="⚗"
           title="No lab reports yet"
-          body="Lab reports you attach to a hospital or clinic visit appear here."
+          body="Reports you scan above or attach to a hospital or clinic visit appear here."
           action={<NeuButton title="Go to Visits" onPress={() => router.navigate('/visits')} />}
         />
       )}
@@ -216,7 +282,13 @@ export function LabTestsReport() {
   );
 }
 
-function ScanResult({ scan }: { scan: Scan }) {
+function ScanResult({
+  scan,
+  onDocumentSaved,
+}: {
+  scan: Scan;
+  onDocumentSaved: (scanId: number, documentId: string) => void;
+}) {
   const database = useDatabase();
   const { palette } = useNeuTheme();
   const [date, setDate] = useState(scan.date);
@@ -224,6 +296,7 @@ function ScanResult({ scan }: { scan: Scan }) {
   const [saved, setSaved] = useState(false);
   // Android shows the date picker as a dialog that is open while mounted.
   const [pickerOpen, setPickerOpen] = useState(false);
+  const hasValues = scan.biomarkers.length > 0;
 
   function pickDate(picked: Date) {
     setPickerOpen(false);
@@ -235,10 +308,30 @@ function ScanResult({ scan }: { scan: Scan }) {
     if (saving) return;
     setSaving(true);
     try {
-      await saveLabResults(database, { biomarkers: scan.biomarkers, measuredAt: date, reportName: scan.name });
+      // Keep the report itself, like a visit document, so it appears in Lab Reports. Only once per
+      // scan: saving again (say, after changing the date) reuses it.
+      let documentId = scan.documentId;
+      if (!documentId) {
+        documentId = await attachDocument(database, {
+          visitId: null,
+          kind: 'lab_report',
+          source: new File(scan.uri),
+          name: scan.name,
+          mimeType: scan.mimeType ?? 'image/jpeg',
+        });
+        onDocumentSaved(scan.id, documentId);
+      }
+      if (hasValues) {
+        await saveLabResults(database, {
+          biomarkers: scan.biomarkers,
+          measuredAt: date,
+          reportName: scan.name,
+          documentId,
+        });
+      }
       setSaved(true);
     } catch (e) {
-      Alert.alert('Could not save results', e instanceof Error ? e.message : 'Something went wrong.');
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setSaving(false);
     }
@@ -251,7 +344,7 @@ function ScanResult({ scan }: { scan: Scan }) {
         <Text numberOfLines={1} className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark">
           {scan.name}
         </Text>
-        {scan.biomarkers.length ? (
+        {hasValues ? (
           scan.biomarkers.map((b) => {
             const badge = FLAG_BADGE[b.flag];
             return (
@@ -272,7 +365,7 @@ function ScanResult({ scan }: { scan: Scan }) {
           </Text>
         )}
 
-        {scan.biomarkers.length ? (
+        {hasValues ? (
           <View className="gap-3 pt-4" style={{ borderTopWidth: 1, borderTopColor: palette.hairline }}>
             <View className="flex-row items-center justify-between gap-3">
               <Text className="text-sm font-semibold text-ink dark:text-ink-dark">Report date</Text>
@@ -309,15 +402,24 @@ function ScanResult({ scan }: { scan: Scan }) {
               variant="primary"
               loading={saving}
               disabled={saved}
-              accessibilityHint="Saves these values to your trends under the report date"
+              accessibilityHint="Saves this report and its values to your trends under the report date"
               onPress={() => void save()}
             />
             <Text className="text-xs text-muted dark:text-muted-dark">
               {saved
-                ? 'Added to your trends below.'
+                ? 'Added to your trends and Lab Reports below.'
                 : 'Check each value against the report first. Saving again for the same date replaces those values.'}
             </Text>
           </View>
+        ) : !scan.documentId || saved ? (
+          // Nothing to chart, but the patient may still want to keep the report.
+          <NeuButton
+            title={saved ? 'Report Saved' : 'Save Report Only'}
+            loading={saving}
+            disabled={saved}
+            accessibilityHint="Keeps this report in Lab Reports without any test values"
+            onPress={() => void save()}
+          />
         ) : null}
       </Card>
     </>

@@ -41,7 +41,6 @@ function RootNavigator() {
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="pill-scanner" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-          <Stack.Screen name="report-scanner" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
           {/* Add a medication by hand or from a prescription photo; ?visitId= links it to a visit. */}
           <Stack.Screen name="add-medication" options={{ presentation: 'modal' }} />
         </Stack.Protected>

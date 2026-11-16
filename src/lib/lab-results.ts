@@ -8,7 +8,8 @@ import { syncData } from '@/lib/sync';
 /*
  * Saved lab results: biomarker readings the patient confirmed after a report was read on the phone.
  * Stored locally in WatermelonDB (works offline) and synced to Supabase public.lab_results. Only the
- * values are stored; the report image stays where it was.
+ * values are stored here; the report file itself is saved as a document (src/lib/visits.ts) and each
+ * reading points at it (document_id), so deleting the report deletes its readings.
  *
  * One reading per biomarker per report date: saving the same report twice (or a second report for
  * the same day) updates that day's values instead of adding duplicate points to the trend.
@@ -26,6 +27,8 @@ export type LabResultRecord = Model & {
   measuredAt: number;
   reportName: string;
   createdAt: Date;
+  /** The visit_documents record the reading was saved from; null for readings saved before v9. */
+  documentId: string | null;
 };
 
 async function currentUserId() {
@@ -42,7 +45,12 @@ async function currentUserId() {
  */
 export async function saveLabResults(
   database: Database,
-  { biomarkers, measuredAt, reportName }: { biomarkers: Biomarker[]; measuredAt: number; reportName: string },
+  {
+    biomarkers,
+    measuredAt,
+    reportName,
+    documentId,
+  }: { biomarkers: Biomarker[]; measuredAt: number; reportName: string; documentId: string | null },
 ): Promise<number> {
   if (!biomarkers.length) throw new Error('There are no values to save.');
   const day = startOfDay(measuredAt);
@@ -65,6 +73,8 @@ export async function saveLabResults(
       r.unit = b.unit;
       r.flag = b.flag;
       r.reportName = reportName;
+      // The latest report for the day owns the reading, so deleting it removes the value.
+      r.documentId = documentId;
     };
 
     await database.batch(
