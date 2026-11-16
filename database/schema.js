@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 7,
+  version: 8,
   tables: [
     tableSchema({
       name: 'users',
@@ -72,6 +72,28 @@ export const schema = appSchema({
         { name: 'extension', type: 'string' },
         // ms, when the document was attached.
         { name: 'uploaded_at', type: 'number' },
+      ]
+    }),
+    // Biomarker readings saved from scanned lab reports (schema v8). Synced to Supabase
+    // (public.lab_results). One row per biomarker per report date.
+    tableSchema({
+      name: 'lab_results',
+      columns: [
+        { name: 'user_id', type: 'string' },
+        // BiomarkerKey from src/lib/report-parser.ts, e.g. 'hba1c', 'blood_pressure'.
+        { name: 'biomarker', type: 'string', isIndexed: true },
+        // In the biomarker's canonical unit. For blood pressure, systolic.
+        { name: 'value', type: 'number' },
+        // Diastolic, for blood pressure only.
+        { name: 'value2', type: 'number', isOptional: true },
+        { name: 'unit', type: 'string' },
+        // 'low' | 'normal' | 'high', from generic adult ranges at the time of saving.
+        { name: 'flag', type: 'string' },
+        // ms, local midnight of the report date.
+        { name: 'measured_at', type: 'number', isIndexed: true },
+        // File name or label of the report the value was read from.
+        { name: 'report_name', type: 'string' },
+        { name: 'created_at', type: 'number' },
       ]
     }),
     // Curated reference data, seeded on the device from src/lib/interaction-data.ts. Never synced.

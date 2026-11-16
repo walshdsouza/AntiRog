@@ -99,5 +99,24 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 8,
+      steps: [
+        createTable({
+          name: 'lab_results',
+          columns: [
+            { name: 'user_id', type: 'string' },
+            { name: 'biomarker', type: 'string', isIndexed: true },
+            { name: 'value', type: 'number' },
+            { name: 'value2', type: 'number', isOptional: true },
+            { name: 'unit', type: 'string' },
+            { name: 'flag', type: 'string' },
+            { name: 'measured_at', type: 'number', isIndexed: true },
+            { name: 'report_name', type: 'string' },
+            { name: 'created_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 })

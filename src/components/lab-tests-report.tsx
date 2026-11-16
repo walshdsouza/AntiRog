@@ -1,26 +1,39 @@
+import DatePicker from '@expo/ui/community/datetime-picker';
+import { useDatabase } from '@nozbe/watermelondb/react';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Text, View } from 'react-native';
 
 import { BiomarkerTrendChart } from '@/components/biomarker-trend-chart';
 import { Badge, Card, Chevron, EmptyState, NeuButton, Note, PressableCard, SectionTitle, Spinner, type Tone } from '@/components/neu';
 import { useLabDocuments, type LabDocument } from '@/hooks/use-lab-documents';
+import { useNeuTheme } from '@/hooks/use-theme-preference';
+import { startOfDay } from '@/lib/doses';
+import { saveLabResults } from '@/lib/lab-results';
 import { isOcrAvailable, OcrError, recognizeText } from '@/lib/ocr';
 import { formatBiomarker, parseLabReport, type Biomarker, type BiomarkerFlag } from '@/lib/report-parser';
 import { documentFile, formatVisitDate, hasLocalFile, previewDocument } from '@/lib/visits';
 
 /*
  * Reports › Tests: read lab values from a photo of a report with on-device OCR, show what was found,
- * a (placeholder) trend chart, and the lab reports already attached to visits.
+ * let the patient date and save them, chart saved readings over time, and list the lab reports
+ * already attached to visits.
  *
  * Zero-trust: the image is read on the phone (src/lib/ocr.ts) and parsed locally
- * (src/lib/report-parser.ts). Nothing is uploaded. Readings are kept in memory for now; persisting
- * them (a `lab_results` table + migration + sync) is the next step and will feed the trend chart.
+ * (src/lib/report-parser.ts). Nothing is uploaded. Only the values the patient saves are stored
+ * (src/lib/lab-results.ts) and synced; the report image itself never leaves the phone.
  */
 
-type Scan = { name: string; biomarkers: Biomarker[] };
+type Scan = {
+  /** Changes with every read, so the result card resets its date and saved state. */
+  id: number;
+  name: string;
+  biomarkers: Biomarker[];
+  /** Suggested report date (ms): the visit's date for an attached report, otherwise today. */
+  date: number;
+};
 
 const FLAG_BADGE: Record<BiomarkerFlag, { label: string; tone: Tone } | null> = {
   low: { label: 'Low', tone: 'warning' },
@@ -28,7 +41,18 @@ const FLAG_BADGE: Record<BiomarkerFlag, { label: string; tone: Tone } | null> = 
   normal: null,
 };
 
-type Picked = { uri: string; name: string; mimeType: string | null };
+type Picked = { uri: string; name: string; mimeType: string | null; date?: number | null };
+
+let scanCount = 0;
+
+function toScan(picked: Picked, blocks: string[]): Scan {
+  return {
+    id: ++scanCount,
+    name: picked.name,
+    biomarkers: parseLabReport(blocks),
+    date: startOfDay(picked.date ?? Date.now()),
+  };
+}
 
 async function takePhoto(): Promise<Picked | null> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -69,7 +93,7 @@ export function LabTestsReport() {
       const picked = await pick();
       if (!picked) return;
       const { blocks } = await recognizeText(picked);
-      setScan({ name: picked.name, biomarkers: parseLabReport(blocks) });
+      setScan(toScan(picked, blocks));
     } catch (e) {
       const title = e instanceof OcrError && e.reason === 'unsupported-file' ? 'PDFs not supported yet' : 'Could not read report';
       Alert.alert(title, e instanceof Error ? e.message : 'Something went wrong.');
@@ -92,7 +116,13 @@ export function LabTestsReport() {
     if (local && ocrReady) {
       actions.push({
         text: 'Read Lab Values',
-        onPress: () => void read(async () => ({ uri: documentFile(doc).uri, name: doc.name, mimeType: doc.mimeType })),
+        onPress: () =>
+          void read(async () => ({
+            uri: documentFile(doc).uri,
+            name: doc.name,
+            mimeType: doc.mimeType,
+            date: doc.visitedAt,
+          })),
       });
     }
     if (local) {
@@ -135,10 +165,10 @@ export function LabTestsReport() {
         ) : null}
       </Card>
 
-      {scan ? <ScanResult scan={scan} /> : null}
+      {scan ? <ScanResult key={scan.id} scan={scan} /> : null}
 
       <SectionTitle>Trends</SectionTitle>
-      <BiomarkerTrendChart latest={scan?.biomarkers ?? []} />
+      <BiomarkerTrendChart />
 
       <SectionTitle>Lab reports from visits</SectionTitle>
       {documents === undefined ? (
@@ -187,6 +217,33 @@ export function LabTestsReport() {
 }
 
 function ScanResult({ scan }: { scan: Scan }) {
+  const database = useDatabase();
+  const { palette } = useNeuTheme();
+  const [date, setDate] = useState(scan.date);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  // Android shows the date picker as a dialog that is open while mounted.
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  function pickDate(picked: Date) {
+    setPickerOpen(false);
+    setDate(startOfDay(picked.getTime()));
+    setSaved(false);
+  }
+
+  async function save() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await saveLabResults(database, { biomarkers: scan.biomarkers, measuredAt: date, reportName: scan.name });
+      setSaved(true);
+    } catch (e) {
+      Alert.alert('Could not save results', e instanceof Error ? e.message : 'Something went wrong.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <>
       <SectionTitle>Latest reading</SectionTitle>
@@ -214,6 +271,54 @@ function ScanResult({ scan }: { scan: Scan }) {
             Text was read, but no known test values were found. Try a closer photo of the results table.
           </Text>
         )}
+
+        {scan.biomarkers.length ? (
+          <View className="gap-3 pt-4" style={{ borderTopWidth: 1, borderTopColor: palette.hairline }}>
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="text-sm font-semibold text-ink dark:text-ink-dark">Report date</Text>
+              {Platform.OS === 'ios' ? (
+                <DatePicker
+                  mode="date"
+                  display="compact"
+                  value={new Date(date)}
+                  maximumDate={new Date()}
+                  onValueChange={(_event, picked) => pickDate(picked)}
+                />
+              ) : (
+                <>
+                  <NeuButton
+                    size="sm"
+                    title={formatVisitDate(date)}
+                    accessibilityHint="Changes the date these results are saved under"
+                    onPress={() => setPickerOpen(true)}
+                  />
+                  {pickerOpen && (
+                    <DatePicker
+                      mode="date"
+                      value={new Date(date)}
+                      maximumDate={new Date()}
+                      onValueChange={(_event, picked) => pickDate(picked)}
+                      onDismiss={() => setPickerOpen(false)}
+                    />
+                  )}
+                </>
+              )}
+            </View>
+            <NeuButton
+              title={saved ? 'Results Saved' : 'Save Results'}
+              variant="primary"
+              loading={saving}
+              disabled={saved}
+              accessibilityHint="Saves these values to your trends under the report date"
+              onPress={() => void save()}
+            />
+            <Text className="text-xs text-muted dark:text-muted-dark">
+              {saved
+                ? 'Added to your trends below.'
+                : 'Check each value against the report first. Saving again for the same date replaces those values.'}
+            </Text>
+          </View>
+        ) : null}
       </Card>
     </>
   );

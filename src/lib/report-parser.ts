@@ -318,7 +318,7 @@ export function parseLabReport(raw: string | string[]): Biomarker[] {
 }
 
 /** "128/84 mmHg", "5.9 %", "182 mg/dL". */
-export function formatBiomarker(b: Pick<Biomarker, 'value' | 'value2' | 'unit'>) {
+export function formatBiomarker(b: { value: number; value2?: number | null; unit: string }) {
   const value = b.value2 != null ? `${b.value}/${b.value2}` : String(b.value);
   return b.unit === '%' ? `${value}%` : `${value} ${b.unit}`;
 }
