@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
 
 import { Card, NeuButton, Note, SectionTitle, Spinner } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 
 import { useNow } from '@/hooks/use-todays-doses';
 import { usePatientGuardians } from '@/hooks/use-patient-guardians';
@@ -32,18 +33,12 @@ export function GuardianSharing() {
   }
 
   function confirmRemove(link: GuardianLink) {
-    Alert.alert(
-      'Remove guardian?',
-      `${guardianLabel(link)} will no longer see your prescriptions or doses.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => void run(() => removeGuardian(link.id), 'Could not remove guardian'),
-        },
-      ],
-    );
+    void showNeuConfirm({
+      title: 'Remove guardian?',
+      message: `${guardianLabel(link)} will no longer see your prescriptions or doses.`,
+      confirmLabel: 'Remove',
+      onConfirm: () => run(() => removeGuardian(link.id), 'Could not remove guardian'),
+    });
   }
 
   return (

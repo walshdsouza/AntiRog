@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Badge, Card, Inset, NeuButton, PressableCard, SectionTitle, Segmented, Spinner } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 import type { PrescriptionRecord } from '@/lib/prescriptions';
 import {
   attachDocument,
@@ -117,25 +118,19 @@ export default function VisitDetailScreen() {
   }
 
   function confirmDelete(target: VisitRecord) {
-    Alert.alert(
-      'Delete visit?',
-      'The visit and its documents will be deleted on all your devices. Medications added from it stay in Medications.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteVisit(database, target);
-              router.back();
-            } catch (e) {
-              Alert.alert('Could not delete', e instanceof Error ? e.message : 'Something went wrong.');
-            }
-          },
-        },
-      ],
-    );
+    void showNeuConfirm({
+      title: 'Delete visit?',
+      message:
+        'The visit, its documents and any test values saved from its lab reports will be deleted on all your devices. Medications added from it stay in Medications.',
+      onConfirm: async () => {
+        try {
+          await deleteVisit(database, target);
+          router.back();
+        } catch (e) {
+          Alert.alert('Could not delete', e instanceof Error ? e.message : 'Something went wrong.');
+        }
+      },
+    });
   }
 
   const subtitle = [visit.facility ? visit.doctor : '', visit.reason].filter(Boolean).join(' · ');
@@ -238,10 +233,13 @@ function DocumentsSection({ visitId, documents }: { visitId: string; documents: 
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       if (!permission.canAskAgain) {
-        Alert.alert('Camera access needed', 'Allow camera access in Settings to photograph documents.', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-        ]);
+        void showNeuConfirm({
+          title: 'Camera access needed',
+          message: 'Allow camera access in Settings to photograph documents.',
+          confirmLabel: 'Open Settings',
+          destructive: false,
+          onConfirm: () => void Linking.openSettings(),
+        });
       }
       return null;
     }
@@ -271,17 +269,18 @@ function DocumentsSection({ visitId, documents }: { visitId: string; documents: 
   }
 
   function confirmRemove(doc: DocumentRow) {
-    Alert.alert('Remove document?', `${doc.name} will be removed from this visit on all your devices.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () =>
-          void deleteDocument(database, doc.record).catch((e: unknown) =>
-            Alert.alert('Could not remove', e instanceof Error ? e.message : 'Something went wrong.'),
-          ),
-      },
-    ]);
+    void showNeuConfirm({
+      title: 'Remove document?',
+      message:
+        doc.kind === 'lab_report'
+          ? `${doc.name} and the test values saved from it will be removed on all your devices.`
+          : `${doc.name} will be removed from this visit on all your devices.`,
+      confirmLabel: 'Remove',
+      onConfirm: () =>
+        deleteDocument(database, doc.record).catch((e: unknown) =>
+          Alert.alert('Could not remove', e instanceof Error ? e.message : 'Something went wrong.'),
+        ),
+    });
   }
 
   return (

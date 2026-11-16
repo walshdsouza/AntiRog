@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { NeuAlertHost } from '@/components/neu-alert';
 import { SessionProvider, useSession } from '@/hooks/use-session';
 import { ThemePreferenceProvider } from '@/hooks/use-theme-preference';
 import { configureNotifications } from '@/lib/reminders';
@@ -24,6 +25,8 @@ export default function RootLayout() {
         <SessionProvider>
           <ThemeProvider value={NAV_THEME[colorScheme === 'dark' ? 'dark' : 'light']}>
             <RootNavigator />
+            {/* Confirmation dialogs from showNeuConfirm(). */}
+            <NeuAlertHost />
           </ThemeProvider>
         </SessionProvider>
       </ThemePreferenceProvider>

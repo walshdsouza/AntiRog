@@ -94,3 +94,25 @@ export async function saveLabResults(
   void syncData();
   return biomarkers.length;
 }
+
+/**
+ * The saved readings that belong to these report documents, for deleting with them. Matches on
+ * document_id, plus readings saved before schema v9 (document_id null) that carry the report's name,
+ * since those were never linked to a document.
+ */
+export async function readingsForDocuments(
+  database: Database,
+  documents: { id: string; name: string }[],
+): Promise<LabResultRecord[]> {
+  if (!documents.length) return [];
+  const names = [...new Set(documents.map((d) => d.name).filter(Boolean))];
+  return database
+    .get<LabResultRecord>('lab_results')
+    .query(
+      Q.or(
+        Q.where('document_id', Q.oneOf(documents.map((d) => d.id))),
+        ...(names.length ? [Q.and(Q.where('document_id', null), Q.where('report_name', Q.oneOf(names)))] : []),
+      ),
+    )
+    .fetch();
+}

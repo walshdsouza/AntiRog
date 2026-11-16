@@ -8,6 +8,7 @@ import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { BiomarkerTrendChart } from '@/components/biomarker-trend-chart';
 import { Badge, Card, Chevron, EmptyState, NeuButton, Note, PressableCard, SectionTitle, Spinner, type Tone } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 import { useLabDocuments, type LabDocument } from '@/hooks/use-lab-documents';
 import { useNeuTheme } from '@/hooks/use-theme-preference';
 import { startOfDay } from '@/lib/doses';
@@ -81,10 +82,13 @@ async function takePhoto(): Promise<Picked | null> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) {
     if (!permission.canAskAgain) {
-      Alert.alert('Camera access needed', 'Allow camera access in Settings to photograph lab reports.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-      ]);
+      void showNeuConfirm({
+        title: 'Camera access needed',
+        message: 'Allow camera access in Settings to photograph lab reports.',
+        confirmLabel: 'Open Settings',
+        destructive: false,
+        onConfirm: () => void Linking.openSettings(),
+      });
     }
     return null;
   }
@@ -169,26 +173,19 @@ export function LabTestsReport() {
 
   function confirmDelete(doc: LabDocument) {
     const fromVisit = doc.visitTitle ? ` It will also be removed from ${doc.visitTitle}.` : '';
-    Alert.alert(
-      'Delete lab report?',
-      `Are you sure? “${doc.name}” and the test values saved from it will be deleted from your trends on all your devices.${fromVisit}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteDocument(database, doc.record);
-              // A result card still showing this report would otherwise save values against it.
-              setScan((current) => (current?.documentId === doc.id ? null : current));
-            } catch (e) {
-              Alert.alert('Could not delete report', e instanceof Error ? e.message : 'Something went wrong.');
-            }
-          },
-        },
-      ],
-    );
+    void showNeuConfirm({
+      title: 'Delete lab report?',
+      message: `Are you sure? “${doc.name}” and the test values saved from it will be deleted from your trends on all your devices.${fromVisit}`,
+      onConfirm: async () => {
+        try {
+          await deleteDocument(database, doc.record);
+          // A result card still showing this report would otherwise save values against it.
+          setScan((current) => (current?.documentId === doc.id ? null : current));
+        } catch (e) {
+          Alert.alert('Could not delete report', e instanceof Error ? e.message : 'Something went wrong.');
+        }
+      },
+    });
   }
 
   function documentSaved(scanId: number, documentId: string) {

@@ -6,6 +6,7 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Text, View } from 'react-native';
 
 import { Card, Inset, NeuButton, SectionTitle } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 import { extractMedications, type ExtractedMedication } from '@/lib/gemini';
 import { savePrescription } from '@/lib/prescriptions';
 
@@ -29,14 +30,13 @@ function firstAsset(result: ImagePicker.ImagePickerResult): Picked | null {
 }
 
 function showSettingsPrompt(what: string) {
-  Alert.alert(
-    `${what} access needed`,
-    `Allow ${what.toLowerCase()} access in Settings to scan a prescription.`,
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Open Settings', onPress: () => Linking.openSettings() },
-    ],
-  );
+  void showNeuConfirm({
+    title: `${what} access needed`,
+    message: `Allow ${what.toLowerCase()} access in Settings to scan a prescription.`,
+    confirmLabel: 'Open Settings',
+    destructive: false,
+    onConfirm: () => void Linking.openSettings(),
+  });
 }
 
 /**

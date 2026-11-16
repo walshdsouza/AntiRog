@@ -4,6 +4,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 
 import { ConnectionPill, StateBadge } from '@/components/guardian-ui';
 import { Badge, Card, NeuButton, SectionTitle, Spinner } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 import { useGuardian } from '@/hooks/use-guardian-context';
 import { useDayStart, useNow } from '@/hooks/use-todays-doses';
 import { friendlyError, patientLabel, removeLink, type GuardianLink } from '@/lib/guardian';
@@ -62,28 +63,22 @@ export default function GuardianPatientScreen() {
   const history = doses.filter((d) => d.user_id === link.patient_id && d.scheduled_at < dayStart);
 
   function confirmUnlink(target: GuardianLink) {
-    Alert.alert(
-      'Stop following?',
-      `You'll no longer see ${patientLabel(target)}'s medications. They'd need to send you a new code to link again.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Stop Following',
-          style: 'destructive',
-          onPress: async () => {
-            setRemoving(true);
-            try {
-              await removeLink(target.id);
-              refresh();
-              router.back();
-            } catch (e) {
-              setRemoving(false);
-              Alert.alert('Could not unlink', friendlyError(e));
-            }
-          },
-        },
-      ],
-    );
+    void showNeuConfirm({
+      title: 'Stop following?',
+      message: `You'll no longer see ${patientLabel(target)}'s medications. They'd need to send you a new code to link again.`,
+      confirmLabel: 'Stop Following',
+      onConfirm: async () => {
+        setRemoving(true);
+        try {
+          await removeLink(target.id);
+          refresh();
+          router.back();
+        } catch (e) {
+          setRemoving(false);
+          Alert.alert('Could not unlink', friendlyError(e));
+        }
+      },
+    });
   }
 
   return (

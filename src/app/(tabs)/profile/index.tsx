@@ -7,6 +7,7 @@ import { Alert, Text, View } from 'react-native';
 import { ConnectionPill } from '@/components/guardian-ui';
 import { GuardianSharing } from '@/components/guardian-sharing';
 import { Badge, Card, Chevron, NeuButton, Note, PressableCard, Screen, SectionTitle, Segmented } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 import { useGuardian } from '@/hooks/use-guardian-context';
 import { useSession } from '@/hooks/use-session';
 import { useThemePreference, type ThemePreference } from '@/hooks/use-theme-preference';
@@ -64,21 +65,16 @@ export default function ProfileScreen() {
       return;
     }
     setSigningOut(false);
-    Alert.alert(
-      'Changes not backed up',
-      'Some changes on this phone have not synced to your account yet, probably because you are offline. Signing out removes your data from this phone, and those changes will be lost.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out Anyway',
-          style: 'destructive',
-          onPress: () => {
-            setSigningOut(true);
-            void signOut();
-          },
-        },
-      ],
-    );
+    void showNeuConfirm({
+      title: 'Changes not backed up',
+      message:
+        'Some changes on this phone have not synced to your account yet, probably because you are offline. Signing out removes your data from this phone, and those changes will be lost.',
+      confirmLabel: 'Sign Out Anyway',
+      onConfirm: () => {
+        setSigningOut(true);
+        void signOut();
+      },
+    });
   }
 
   return (

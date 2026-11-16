@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, Linking, Platform, Text, View } from 'react-native';
 
 import { Card, NeuButton, NeuSwitch, SectionTitle } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 
 import type { PrescriptionRecord } from '@/lib/prescriptions';
 import {
@@ -113,8 +114,11 @@ function showPermissionHelp(blocked: boolean) {
     Alert.alert('Notifications are off', 'Allow notifications to get daily medication reminders.');
     return;
   }
-  Alert.alert('Notifications are off', 'Allow notifications for AntiRog in Settings to get daily reminders.', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-  ]);
+  void showNeuConfirm({
+    title: 'Notifications are off',
+    message: 'Allow notifications for AntiRog in Settings to get daily reminders.',
+    confirmLabel: 'Open Settings',
+    destructive: false,
+    onConfirm: () => void Linking.openSettings(),
+  });
 }

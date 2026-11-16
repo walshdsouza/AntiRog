@@ -6,6 +6,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { DoseLogCard } from '@/components/dose-log';
 import { DrugProfileCard } from '@/components/drug-profile-card';
 import { NeuButton, PressableCard, Spinner } from '@/components/neu';
+import { showNeuConfirm } from '@/components/neu-alert';
 import { ReminderCard } from '@/components/reminder-card';
 import { deletePrescription, type PrescriptionRecord } from '@/lib/prescriptions';
 import { formatVisitDate, visitTitle, type VisitRecord } from '@/lib/visits';
@@ -72,21 +73,18 @@ export default function PrescriptionDetailScreen() {
   }
 
   function confirmDelete({ record, medication }: Snapshot) {
-    Alert.alert('Delete medication?', `${medication} will be removed from your medications on all devices.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deletePrescription(database, record);
-            router.back();
-          } catch (e) {
-            Alert.alert('Could not delete', e instanceof Error ? e.message : 'Something went wrong.');
-          }
-        },
+    void showNeuConfirm({
+      title: 'Delete medication?',
+      message: `${medication} will be removed from your medications on all devices.`,
+      onConfirm: async () => {
+        try {
+          await deletePrescription(database, record);
+          router.back();
+        } catch (e) {
+          Alert.alert('Could not delete', e instanceof Error ? e.message : 'Something went wrong.');
+        }
       },
-    ]);
+    });
   }
 
   return (

@@ -1,6 +1,7 @@
 import { Q, type Database, type Model } from '@nozbe/watermelondb';
 import { Directory, File, Paths } from 'expo-file-system';
 
+import { readingsForDocuments } from '@/lib/lab-results';
 import { supabase } from '@/lib/supabase';
 import { syncData } from '@/lib/sync';
 
@@ -98,12 +99,6 @@ export async function updateVisit(database: Database, visit: VisitRecord, input:
   void syncData();
 }
 
-/** Lab readings that were saved from these documents (see src/lib/lab-results.ts). */
-function readingsFrom(database: Database, documentIds: string[]) {
-  if (!documentIds.length) return Promise.resolve([] as Model[]);
-  return database.get('lab_results').query(Q.where('document_id', Q.oneOf(documentIds))).fetch();
-}
-
 /**
  * Soft-deletes a visit, its documents and the lab readings saved from them (so the deletion syncs)
  * and removes the document files from this phone. Prescriptions added from the visit stay in
@@ -114,7 +109,8 @@ export async function deleteVisit(database: Database, visit: VisitRecord) {
     .get<VisitDocumentRecord>('visit_documents')
     .query(Q.where('visit_id', visit.id))
     .fetch();
-  const readings = await readingsFrom(database, documents.map((d) => d.id));
+  // Lab reports only: other documents never have readings, and their names must not match any.
+  const readings = await readingsForDocuments(database, documents.filter((d) => d.kind === 'lab_report'));
   await database.write(async () => {
     await database.batch([
       ...readings.map((r) => r.prepareMarkAsDeleted()),
@@ -229,7 +225,8 @@ export async function attachDocument(
  * leave the trend charts, and deletes the file on this phone.
  */
 export async function deleteDocument(database: Database, document: VisitDocumentRecord) {
-  const readings = await readingsFrom(database, [document.id]);
+  const readings = document.kind === 'lab_report' ? await readingsForDocuments(database, [document]) : [];
+  // One batch, so the trend charts drop the readings in the same update that removes the report.
   await database.write(async () => {
     await database.batch([...readings.map((r) => r.prepareMarkAsDeleted()), document.prepareMarkAsDeleted()]);
   });
