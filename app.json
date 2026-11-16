@@ -57,6 +57,7 @@
         }
       ],
       "react-native-fast-tflite",
+      "./plugins/with-mlkit-ocr-model",
       "./plugins/with-android-shaders",
       "expo-sharing"
     ],
