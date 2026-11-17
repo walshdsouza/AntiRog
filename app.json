@@ -61,6 +61,7 @@
       "./plugins/with-mlkit-ocr-model",
       "./plugins/with-android-shaders",
       "expo-sharing",
+      "./plugins/with-widget-open-app",
       [
         "expo-widgets",
         {
@@ -82,7 +83,7 @@
                 "minHeight": 110,
                 "targetCellWidth": 3,
                 "targetCellHeight": 2,
-                "resizeMode": "both"
+                "resizeMode": "none"
               }
             }
           ]
