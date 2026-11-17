@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml:2:13-83
+INJECTED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml:2:13-83
+	package
+		INJECTED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml
+	xmlns:android
+		ADDED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml:2:23-81
+uses-sdk
+INJECTED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml reason: use-sdk injection requested
+INJECTED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml
+INJECTED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\WALSH\AntiRog\modules\pdf-renderer\android\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11782788850610872520.xml

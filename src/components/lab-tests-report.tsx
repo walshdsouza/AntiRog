@@ -124,7 +124,7 @@ export function LabTestsReport() {
       const { blocks } = await recognizeText(picked);
       setScan(toScan(picked, blocks));
     } catch (e) {
-      const title = e instanceof OcrError && e.reason === 'unsupported-file' ? 'PDFs not supported yet' : 'Could not read report';
+      const title = e instanceof OcrError && e.reason === 'unsupported-file' ? 'Can’t read this file' : 'Could not read report';
       Alert.alert(title, e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setReading(false);
