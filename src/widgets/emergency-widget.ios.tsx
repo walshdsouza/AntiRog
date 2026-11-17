@@ -47,7 +47,7 @@ const EmergencyWidget = (props: EmergencyWidgetProps, environment: WidgetEnviron
         </Text>
         <Text modifiers={[font({ size: 12 }), foregroundStyle(muted), lineLimit(3)]}>
           {props.state === 'hidden'
-            ? 'Turn on “Show on Home Screen” in AntiRog › Profile › Medical ID.'
+            ? 'Turn on “Show on Home Screen & Lock Screen” in AntiRog › Profile › Medical ID.'
             : 'Add your details in AntiRog › Profile › Medical ID.'}
         </Text>
       </VStack>

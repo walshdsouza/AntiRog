@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { AndroidImportance, AndroidNotificationVisibility, IosAuthorizationStatus } from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { EMERGENCY_NOTIFICATION_ID } from '@/lib/emergency-notification';
 import type { PrescriptionRecord } from '@/lib/prescriptions';
 import { syncData } from '@/lib/sync';
 
@@ -16,15 +17,22 @@ const CHANNEL_ID = 'medication-reminders';
 const ID_PREFIX = 'reminder:';
 export const DEFAULT_REMINDER_MINUTES = 9 * 60;
 
-/** Call once at startup: shows reminders even while the app is open. */
+/**
+ * Call once at startup: shows reminders even while the app is open. The lock screen Medical ID
+ * (src/lib/emergency-notification.ts) is re-posted whenever the app opens, so it goes straight to the
+ * notification list, silently.
+ */
 export function configureNotifications() {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
+    handleNotification: async (notification) => {
+      const medicalId = notification.request.identifier === EMERGENCY_NOTIFICATION_ID;
+      return {
+        shouldShowBanner: !medicalId,
+        shouldShowList: true,
+        shouldPlaySound: !medicalId,
+        shouldSetBadge: false,
+      };
+    },
   });
 }
 

@@ -1,3 +1,4 @@
+import { hideEmergencyNotification } from '@/lib/emergency-notification';
 import type EmergencyWidgetModule from '@/widgets/emergency-widget';
 import { EMPTY_WIDGET_PROPS, type EmergencyWidgetProps } from '@/widgets/emergency-widget.types';
 
@@ -32,7 +33,11 @@ export function pushEmergencyWidget(props: EmergencyWidgetProps) {
   }
 }
 
-/** Resets the widget to "Not set up". Called when the local data is wiped (sign-out). */
+/**
+ * Resets the widget to "Not set up" and removes the Android lock screen notification. Called when
+ * the local data is wiped (sign-out).
+ */
 export function clearEmergencyWidget() {
   pushEmergencyWidget(EMPTY_WIDGET_PROPS);
+  void hideEmergencyNotification();
 }

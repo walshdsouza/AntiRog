@@ -6,6 +6,7 @@ import { Alert, Platform, ScrollView, Text, View } from 'react-native';
 
 import { Badge, Card, FieldLabel, NeuButton, NeuInput, NeuSwitch, Note, Spinner } from '@/components/neu';
 import { useEmergencyProfile } from '@/hooks/use-emergency-profile';
+import { requestEmergencyNotificationPermission } from '@/lib/emergency-notification';
 import {
   BLOOD_TYPES,
   dateToIso,
@@ -55,6 +56,13 @@ export default function EmergencyProfileScreen() {
     setSaving(true);
     try {
       await saveEmergencyProfile(database, form);
+      // Android 13+ needs permission before the lock screen notification can appear.
+      if (form.showOnWidget && Platform.OS === 'android' && !(await requestEmergencyNotificationPermission())) {
+        Alert.alert(
+          'Lock screen needs notifications',
+          'Your Medical ID is saved and on the home screen widget. To show it on the lock screen, allow notifications for AntiRog in Settings.',
+        );
+      }
       router.back();
     } catch (e) {
       Alert.alert('Could not save Medical ID', e instanceof Error ? e.message : 'Something went wrong.');
@@ -192,21 +200,25 @@ export default function EmergencyProfileScreen() {
       <Card className="gap-3 px-4 py-5">
         <View className="flex-row items-center gap-3">
           <View className="flex-1">
-            <Text className="text-base font-semibold text-ink dark:text-ink-dark">Show on Home Screen</Text>
-            <Text className="text-sm text-muted dark:text-muted-dark">Add the “Medical ID” widget to your home screen.</Text>
+            <Text className="text-base font-semibold text-ink dark:text-ink-dark">Show on Home Screen &amp; Lock Screen</Text>
+            <Text className="text-sm text-muted dark:text-muted-dark">
+              {Platform.OS === 'android'
+                ? 'Fills the “Medical ID” widget and keeps a silent notification on your lock screen.'
+                : 'Fills the “Medical ID” widget on your home screen and lock screen.'}
+            </Text>
           </View>
           <NeuSwitch
             value={form.showOnWidget}
             onValueChange={(showOnWidget) => set({ showOnWidget })}
-            accessibilityLabel="Show Medical ID on the home screen widget"
+            accessibilityLabel="Show Medical ID on the home screen and lock screen"
           />
         </View>
         {form.showOnWidget ? (
           <View className="flex-row items-start gap-2">
             <Badge label="Visible when locked" tone="warning" />
             <Text className="flex-1 text-xs text-muted dark:text-muted-dark">
-              Anyone holding your phone can read the widget without unlocking it. That&apos;s what makes it useful in
-              an emergency.
+              Anyone holding your phone can read these details without unlocking it. That&apos;s what makes them
+              useful in an emergency.
             </Text>
           </View>
         ) : null}
