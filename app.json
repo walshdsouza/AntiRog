@@ -8,7 +8,8 @@
     "scheme": "antirog",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.walshdsouza.antirog"
     },
     "android": {
       "package": "com.walshdsouza.antirog",
@@ -59,7 +60,34 @@
       "react-native-fast-tflite",
       "./plugins/with-mlkit-ocr-model",
       "./plugins/with-android-shaders",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-widgets",
+        {
+          "enableAndroid": true,
+          "widgets": [
+            {
+              "name": "EmergencyWidget",
+              "displayName": "Medical ID",
+              "description": "Your blood type, allergies and emergency contact, at a glance.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular"
+                ]
+              },
+              "android": {
+                "minWidth": 180,
+                "minHeight": 110,
+                "targetCellWidth": 3,
+                "targetCellHeight": 2,
+                "resizeMode": "both"
+              }
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

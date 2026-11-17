@@ -7,6 +7,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { NeuAlertHost } from '@/components/neu-alert';
+import { NeuSheetHost } from '@/components/neu-sheet';
 import { SessionProvider, useSession } from '@/hooks/use-session';
 import { ThemePreferenceProvider } from '@/hooks/use-theme-preference';
 import { configureNotifications } from '@/lib/reminders';
@@ -27,6 +28,8 @@ export default function RootLayout() {
             <RootNavigator />
             {/* Confirmation dialogs from showNeuConfirm(). */}
             <NeuAlertHost />
+            {/* Action menus from showNeuSheet(). */}
+            <NeuSheetHost />
           </ThemeProvider>
         </SessionProvider>
       </ThemePreferenceProvider>

@@ -9,6 +9,7 @@ import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
 import { BiomarkerTrendChart } from '@/components/biomarker-trend-chart';
 import { Badge, Card, Chevron, EmptyState, NeuButton, Note, PressableCard, SectionTitle, Spinner, type Tone } from '@/components/neu';
 import { showNeuConfirm } from '@/components/neu-alert';
+import { showNeuSheet, type NeuSheetOption } from '@/components/neu-sheet';
 import { useLabDocuments, type LabDocument } from '@/hooks/use-lab-documents';
 import { useNeuTheme } from '@/hooks/use-theme-preference';
 import { startOfDay } from '@/lib/doses';
@@ -131,19 +132,23 @@ export function LabTestsReport() {
   }
 
   function chooseSource() {
-    Alert.alert('Scan or upload a lab report', 'The report is read on this phone and never uploaded.', [
-      { text: 'Take a Photo', onPress: () => void read(takePhoto) },
-      { text: 'Choose a File', onPress: () => void read(chooseFile) },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    showNeuSheet({
+      title: 'Scan or upload a lab report',
+      message: 'The report is read on this phone and never uploaded.',
+      options: [
+        { label: 'Take a Photo', hint: 'Opens the camera', onPress: () => void read(takePhoto) },
+        { label: 'Choose a File', hint: 'Picks a photo or PDF from your files', onPress: () => void read(chooseFile) },
+      ],
+    });
   }
 
   function openDocument(doc: LabDocument) {
     const local = hasLocalFile(doc);
-    const actions: Parameters<typeof Alert.alert>[2] = [];
+    const actions: NeuSheetOption[] = [];
     if (local && ocrReady) {
       actions.push({
-        text: 'Read Lab Values',
+        label: 'Read Lab Values',
+        hint: 'Reads the test values from this report again',
         onPress: () =>
           void read(async () => ({
             uri: documentFile(doc).uri,
@@ -156,7 +161,7 @@ export function LabTestsReport() {
     }
     if (local) {
       actions.push({
-        text: 'Open Document',
+        label: 'Open Document',
         onPress: () =>
           void previewDocument(doc.record).catch((e: unknown) =>
             Alert.alert('Could not open document', e instanceof Error ? e.message : 'Something went wrong.'),
@@ -165,10 +170,15 @@ export function LabTestsReport() {
     }
     const { visitId } = doc;
     if (visitId) {
-      actions.push({ text: 'Go to Visit', onPress: () => router.push({ pathname: '/visits/[id]', params: { id: visitId } }) });
+      actions.push({ label: 'Go to Visit', onPress: () => router.push({ pathname: '/visits/[id]', params: { id: visitId } }) });
     }
-    actions.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert(doc.name, local ? undefined : 'This document is stored on another device.', actions);
+    // The sheet has room for every action, so Delete lives here too, not only on the row.
+    actions.push({ label: 'Delete Report', destructive: true, onPress: () => confirmDelete(doc) });
+    showNeuSheet({
+      title: doc.name,
+      message: local ? undefined : 'This document is stored on another device.',
+      options: actions,
+    });
   }
 
   function confirmDelete(doc: LabDocument) {

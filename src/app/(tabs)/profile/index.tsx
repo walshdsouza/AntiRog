@@ -8,10 +8,12 @@ import { ConnectionPill } from '@/components/guardian-ui';
 import { GuardianSharing } from '@/components/guardian-sharing';
 import { Badge, Card, Chevron, NeuButton, Note, PressableCard, Screen, SectionTitle, Segmented } from '@/components/neu';
 import { showNeuConfirm } from '@/components/neu-alert';
+import { useEmergencyProfile } from '@/hooks/use-emergency-profile';
 import { useGuardian } from '@/hooks/use-guardian-context';
 import { useSession } from '@/hooks/use-session';
 import { useThemePreference, type ThemePreference } from '@/hooks/use-theme-preference';
 import { useDayStart, useNow } from '@/hooks/use-todays-doses';
+import { ageOn } from '@/lib/emergency-profile';
 import { needsAttention, todayRows } from '@/lib/guardian-status';
 import { signOutAndClear } from '@/lib/local-data';
 import { syncData } from '@/lib/sync';
@@ -96,6 +98,8 @@ export default function ProfileScreen() {
         />
       </View>
 
+      <MedicalIdEntry />
+
       <GuardianSharing />
 
       <LookAfterEntry />
@@ -117,6 +121,50 @@ export default function ProfileScreen() {
         </Note>
       </View>
     </Screen>
+  );
+}
+
+/** The Medical ID at a glance, opening the editor. */
+function MedicalIdEntry() {
+  const router = useRouter();
+  const profile = useEmergencyProfile();
+
+  const age = profile ? ageOn(profile.dateOfBirth) : null;
+  const facts = profile
+    ? [
+        profile.bloodType ? `Blood ${profile.bloodType}` : null,
+        age != null ? `${age} yrs` : null,
+        `Allergies: ${profile.knownAllergies || 'none known'}`,
+      ].filter(Boolean)
+    : [];
+
+  return (
+    <View className="gap-3">
+      <SectionTitle>Emergency</SectionTitle>
+      <PressableCard
+        tone={profile ? 'default' : 'danger'}
+        accessibilityLabel={profile ? `Medical ID for ${profile.fullName}. ${facts.join(', ')}` : 'Set up your Medical ID'}
+        accessibilityHint="Opens your Medical ID"
+        onPress={() => router.push('/profile/emergency')}>
+        <View className="flex-row items-center gap-3">
+          <View className="flex-1 gap-0.5">
+            <Text className="text-base font-semibold text-ink dark:text-ink-dark">
+              {profile ? profile.fullName : 'Set up your Medical ID'}
+            </Text>
+            <Text numberOfLines={2} className="text-sm text-muted dark:text-muted-dark">
+              {profile === undefined
+                ? 'Loading…'
+                : profile
+                  ? facts.join(' · ')
+                  : 'Blood type, allergies, conditions and an emergency contact, for first responders.'}
+            </Text>
+          </View>
+          {profile?.showOnWidget ? <Badge label="Widget" tone="success" /> : null}
+          {profile === null ? <Badge label="Set up" tone="danger" /> : null}
+          <Chevron />
+        </View>
+      </PressableCard>
+    </View>
   );
 }
 

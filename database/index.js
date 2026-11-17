@@ -10,6 +10,7 @@ import Visit from './Visit'
 import VisitDocument from './VisitDocument'
 import LabResult from './LabResult'
 import ScannedPill from './ScannedPill'
+import EmergencyProfile from './EmergencyProfile'
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -22,5 +23,5 @@ const adapter = new SQLiteAdapter({
 
 export const database = new Database({
   adapter,
-  modelClasses: [User, Prescription, InteractionPair, DoseEvent, Visit, VisitDocument, LabResult, ScannedPill],
+  modelClasses: [User, Prescription, InteractionPair, DoseEvent, Visit, VisitDocument, LabResult, ScannedPill, EmergencyProfile],
 })

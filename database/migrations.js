@@ -138,5 +138,24 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 10,
+      steps: [
+        createTable({
+          name: 'emergency_profile',
+          columns: [
+            { name: 'user_id', type: 'string' },
+            { name: 'full_name', type: 'string' },
+            { name: 'date_of_birth', type: 'string' },
+            { name: 'blood_type', type: 'string' },
+            { name: 'known_allergies', type: 'string' },
+            { name: 'chronic_conditions', type: 'string' },
+            { name: 'emergency_contact_number', type: 'string' },
+            { name: 'show_on_widget', type: 'boolean' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 })

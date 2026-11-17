@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Linking, Text, View } from 'react-native';
 
 import { Card, Inset, NeuButton, SectionTitle } from '@/components/neu';
 import { showNeuConfirm } from '@/components/neu-alert';
+import { showNeuSheet } from '@/components/neu-sheet';
 import { extractMedications, type ExtractedMedication } from '@/lib/gemini';
 import { savePrescription } from '@/lib/prescriptions';
 
@@ -139,11 +140,14 @@ export function ScanPrescription({ visitId }: { visitId?: string }) {
   }
 
   function scan() {
-    Alert.alert('Scan Prescription', 'Choose where the prescription photo comes from.', [
-      { text: 'Take Photo', onPress: () => void takePhoto().catch(reportError) },
-      { text: 'Choose from Gallery', onPress: () => void pickFromGallery().catch(reportError) },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    showNeuSheet({
+      title: 'Scan Prescription',
+      message: 'Choose where the prescription photo comes from.',
+      options: [
+        { label: 'Take Photo', hint: 'Opens the camera', onPress: () => void takePhoto().catch(reportError) },
+        { label: 'Choose from Gallery', onPress: () => void pickFromGallery().catch(reportError) },
+      ],
+    });
   }
 
   return (

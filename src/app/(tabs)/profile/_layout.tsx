@@ -7,6 +7,7 @@ export default function ProfileLayout() {
   return (
     <Stack screenOptions={options}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="emergency" options={{ title: 'Medical ID' }} />
       <Stack.Screen name="guardian/index" options={{ title: 'People You Look After' }} />
       <Stack.Screen name="guardian/patient/[id]" options={{ title: 'Patient' }} />
       <Stack.Screen name="guardian/link" options={{ title: 'Add a Patient', presentation: 'modal' }} />

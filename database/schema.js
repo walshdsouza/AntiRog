@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 9,
+  version: 10,
   tables: [
     tableSchema({
       name: 'users',
@@ -115,6 +115,22 @@ export const schema = appSchema({
         { name: 'confidence', type: 'number' },
         // ms, when the pill was identified.
         { name: 'scanned_at', type: 'number', isIndexed: true },
+      ]
+    }),
+    // Emergency Medical ID (schema v10). Synced to Supabase (public.emergency_profile). At most one
+    // record per user: its id is the user's id. date_of_birth is 'YYYY-MM-DD' or ''.
+    tableSchema({
+      name: 'emergency_profile',
+      columns: [
+        { name: 'user_id', type: 'string' },
+        { name: 'full_name', type: 'string' },
+        { name: 'date_of_birth', type: 'string' },
+        { name: 'blood_type', type: 'string' },
+        { name: 'known_allergies', type: 'string' },
+        { name: 'chronic_conditions', type: 'string' },
+        { name: 'emergency_contact_number', type: 'string' },
+        { name: 'show_on_widget', type: 'boolean' },
+        { name: 'updated_at', type: 'number' },
       ]
     }),
     // Curated reference data, seeded on the device from src/lib/interaction-data.ts. Never synced.

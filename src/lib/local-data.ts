@@ -1,5 +1,6 @@
 import { Q, type Database } from '@nozbe/watermelondb';
 
+import { clearEmergencyWidget } from '@/lib/emergency-widget';
 import { cancelAllReminders } from '@/lib/reminders';
 import { supabase } from '@/lib/supabase';
 import { syncData } from '@/lib/sync';
@@ -56,6 +57,8 @@ export function clearLocalData(database: Database) {
     });
     // Visit documents are medical files; they must not outlive the account's data on this phone.
     deleteAllDocumentFiles();
+    // Nor may the Medical ID on the home screen.
+    clearEmergencyWidget();
   });
 }
 
@@ -84,6 +87,7 @@ export function claimLocalData(database: Database, userId: string) {
         await database.unsafeResetDatabase();
       });
       deleteAllDocumentFiles();
+      clearEmergencyWidget();
     }
     await database.localStorage.set(OWNER_KEY, userId);
   });
